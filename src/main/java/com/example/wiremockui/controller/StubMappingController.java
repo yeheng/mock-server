@@ -22,9 +22,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class StubMappingController {
-    
+
     private final StubMappingService stubMappingService;
-    
+
     /**
      * 创建新的 Stub
      */
@@ -40,7 +40,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 获取所有 Stubs
      */
@@ -54,7 +54,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 分页获取所有 Stubs
      */
@@ -68,7 +68,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 搜索 Stubs
      */
@@ -82,22 +82,22 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 根据 ID 获取 Stub
      */
     @GetMapping("/{stubId}")
     public ResponseEntity<StubMapping> getStubById(@PathVariable Long stubId) {
         return stubMappingService.getStubById(stubId)
-                .map(stub -> ResponseEntity.ok(stub))
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     /**
      * 更新 Stub
      */
     @PutMapping("/{stubId}")
-    public ResponseEntity<StubMapping> updateStub(@PathVariable Long stubId, 
+    public ResponseEntity<StubMapping> updateStub(@PathVariable Long stubId,
                                                   @Valid @RequestBody StubMapping updatedStub) {
         try {
             StubMapping stub = stubMappingService.updateStub(stubId, updatedStub);
@@ -109,7 +109,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 删除 Stub
      */
@@ -125,7 +125,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 启用/禁用 Stub
      */
@@ -141,7 +141,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 重新加载所有 stubs
      */
@@ -155,7 +155,7 @@ public class StubMappingController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
     /**
      * 获取 stub 统计信息
      */

@@ -116,7 +116,7 @@ class StubMappingRepositoryTest {
 
         // 验证
         assertNotNull(results);
-        assertTrue(results.size() >= 1); // 至少包含一个结果
+        assertFalse(results.isEmpty()); // 至少包含一个结果
         boolean found = results.stream().anyMatch(s -> s.getName().contains("用户"));
         assertTrue(found, "应该找到包含'用户'的记录");
     }

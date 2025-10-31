@@ -14,9 +14,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -119,7 +117,7 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(2, response.getBody().size());
+        assertEquals(2, Objects.requireNonNull(response.getBody()).size());
     }
 
     @Test
@@ -149,14 +147,14 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(2, response.getBody().getContent().size());
+        assertEquals(2, Objects.requireNonNull(response.getBody()).getContent().size());
     }
 
     @Test
     @DisplayName("测试 searchStubs - 成功搜索")
     void testSearchStubs_Success() {
         // 准备
-        when(stubMappingService.searchStubs("用户")).thenReturn(Arrays.asList(testStub));
+        when(stubMappingService.searchStubs("用户")).thenReturn(Collections.singletonList(testStub));
 
         // 执行
         ResponseEntity<List<StubMapping>> response = controller.searchStubs("用户");
@@ -164,7 +162,7 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, Objects.requireNonNull(response.getBody()).size());
     }
 
     @Test
@@ -193,7 +191,7 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1L, response.getBody().getId());
+        assertEquals(1L, Objects.requireNonNull(response.getBody()).getId());
     }
 
     @Test
@@ -229,7 +227,7 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("更新后的接口", response.getBody().getName());
+        assertEquals("更新后的接口", Objects.requireNonNull(response.getBody()).getName());
     }
 
     @Test
@@ -395,7 +393,7 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(10, response.getBody().getTotalStubs());
+        assertEquals(10, Objects.requireNonNull(response.getBody()).getTotalStubs());
         assertEquals(7, response.getBody().getEnabledStubs());
         assertEquals(3, response.getBody().getDisabledStubs());
     }

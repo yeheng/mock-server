@@ -187,7 +187,6 @@ public class WireMockManager {
     public List<LoggedRequest> getRequestLogs() {
         // WireMock 3.x API已变更，简化处理
         if (isRunning()) {
-            // TODO: 使用WireMock 3.x的正确API获取请求日志
             return wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
         }
         return List.of();
