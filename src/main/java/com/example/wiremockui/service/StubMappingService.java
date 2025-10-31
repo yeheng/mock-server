@@ -16,11 +16,12 @@ import java.util.Optional;
 /**
  * StubMapping 服务类
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StubMappingService {
-    
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(StubMappingService.class);
+
     private final StubMappingRepository stubMappingRepository;
     private final WireMockManager wireMockManager;
     private final ObjectMapper objectMapper;

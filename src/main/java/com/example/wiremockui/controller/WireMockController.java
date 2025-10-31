@@ -12,13 +12,14 @@ import java.util.Map;
 /**
  * WireMock 全局状态 REST API 控制器
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/wiremock")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class WireMockController {
-    
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WireMockController.class);
+
     private final WireMockManager wireMockManager;
     
     /**

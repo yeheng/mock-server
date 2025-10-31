@@ -46,16 +46,19 @@ spring:
     indentation:
       enabled: true
 
-# WireMock 配置
+# WireMock 配置 (集成模式)
 wiremock:
-  # WireMock 服务器端口
-  port: 8081
+  # 集成模式：WireMock 使用 Spring Boot 相同的端口 (默认 8080)
+  # 设置为 0 表示使用 Spring Boot 端口，不启动独立服务器
+  port: 0
+  # 是否为集成模式 (true 表示集成到 Undertow 容器中)
+  integrated-mode: true
   # 需要代理的目标服务器 (可选)
   target-server-url: ""
   # 保存 stub 文件的目录
   stub-storage-directory: "./wiremock-stubs"
-  # 启用 WireMock 管理页面
-  enable-admin-ui: true
+  # 启用 WireMock 管理页面 (集成模式下建议禁用)
+  enable-admin-ui: false
   # 记录请求日志
   request-logging-enabled: true
 

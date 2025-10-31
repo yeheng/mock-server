@@ -15,12 +15,13 @@ import java.io.IOException;
  * WireMock Servlet Filter
  * 将匹配的请求路由到 WireMock 服务器
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 @Order(1) // 高优先级
 public class WireMockServletFilter implements Filter {
-    
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WireMockServletFilter.class);
+
     private final WireMockManager wireMockManager;
     
     @Override

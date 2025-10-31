@@ -43,7 +43,6 @@ body {
 
 /* 统计卡片特殊样式 */
 .stats-card {
-    background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary-rgb));
     border: none;
 }
 
@@ -218,24 +217,24 @@ body {
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    
+
     .card-body {
         padding: 1rem;
     }
-    
+
     .stats-card .card-body {
         padding: 1.5rem;
     }
-    
+
     .table-responsive {
         font-size: 0.8rem;
     }
-    
+
     .action-buttons {
         flex-direction: column;
         width: 100%;
     }
-    
+
     .action-buttons .btn {
         width: 100%;
         margin-bottom: 0.25rem;
@@ -246,16 +245,12 @@ body {
     .navbar-brand {
         font-size: 1.2rem;
     }
-    
+
     .stats-card h2 {
         font-size: 1.5rem;
     }
-    
+
     .modal-dialog {
         margin: 1rem;
     }
 }
-
-/* 图表容器 */
-.chart-container {
-    position: relative;
