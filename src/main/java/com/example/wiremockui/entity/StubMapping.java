@@ -1,0 +1,245 @@
+package com.example.wiremockui.entity;
+
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.common.Json;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.hibernate.proxy.HibernateProxy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import wiremock.com.fasterxml.jackson.databind.JsonNode;
+
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+
+/**
+ * WireMock Stub 映射实体
+ */
+@Entity
+@Table(name = "stub_mappings")
+@Getter
+@Setter
+@ToString
+@RequiredArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
+public class StubMapping {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /**
+     * Stub 名称
+     */
+    @Column(nullable = false, length = 200)
+    private String name;
+
+    /**
+     * Stub 描述
+     */
+    @Column(length = 1000)
+    private String description;
+
+    /**
+     * Stub UUID (WireMock 内部使用)
+     */
+    @Column(length = 50)
+    private String uuid;
+
+    /**
+     * 是否启用
+     */
+    @Column(nullable = false)
+    private Boolean enabled = true;
+
+    /**
+     * 优先级 (数字越小优先级越高)
+     */
+    @Column(nullable = false)
+    private Integer priority = 0;
+
+    /**
+     * 请求模式 (GET, POST, PUT, DELETE 等)
+     */
+    @Column(length = 10, nullable = false)
+    private String method;
+
+    /**
+     * URL 模式
+     */
+    @Column(length = 1000, nullable = false)
+    private String url;
+
+    /**
+     * URL 匹配类型
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UrlMatchType urlMatchType = UrlMatchType.EQUALS;
+
+    /**
+     * 请求体模式 (JSON)
+     */
+    @Column(columnDefinition = "CLOB")
+    private String requestBodyPattern;
+
+    /**
+     * 请求头模式 (JSON)
+     */
+    @Column(columnDefinition = "CLOB")
+    private String requestHeadersPattern;
+
+    /**
+     * 查询参数模式 (JSON)
+     */
+    @Column(columnDefinition = "CLOB")
+    private String queryParametersPattern;
+
+    /**
+     * 响应定义 (JSON)
+     */
+    @Column(columnDefinition = "CLOB", nullable = false)
+    private String responseDefinition;
+
+    /**
+     * 创建时间
+     */
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    public enum UrlMatchType {
+        /**
+         * 精确匹配
+         */
+        EQUALS,
+        /**
+         * 包含匹配
+         */
+        CONTAINS,
+        /**
+         * 正则表达式匹配
+         */
+        REGEX,
+        /**
+         * 通配符匹配
+         */
+        PATH_TEMPLATE
+    }
+
+    /**
+     * 转换为WireMock的RequestPattern
+     */
+    @Transient
+    public MappingBuilder getRequestPattern() {
+        if (!enabled) {
+            return null;
+        }
+
+        // WireMock 3.x 简化版本，仅支持精确匹配
+        MappingBuilder builder = switch (method.toUpperCase()) {
+            case "GET" -> WireMock.get(urlEqualTo(url));
+            case "POST" -> WireMock.post(urlEqualTo(url));
+            case "PUT" -> WireMock.put(urlEqualTo(url));
+            case "DELETE" -> WireMock.delete(urlEqualTo(url));
+            case "PATCH" -> WireMock.patch(urlEqualTo(url));
+            case "HEAD" -> WireMock.head(urlEqualTo(url));
+            default -> WireMock.any(urlEqualTo(url));
+        };
+
+
+        // 设置URL匹配类型
+        switch (urlMatchType) {
+            case EQUALS:
+                // urlEqualTo已经在上面使用了，这里不需要额外处理
+                break;
+            case CONTAINS:
+                builder = WireMock.any(WireMock.urlPathMatching(url));
+                break;
+            case REGEX:
+                // 对于正则表达式，需要重新构建builder
+                builder = switch (method.toUpperCase()) {
+                    case "GET" -> WireMock.get(urlMatching(url));
+                    case "POST" -> WireMock.post(urlMatching(url));
+                    case "PUT" -> WireMock.put(urlMatching(url));
+                    case "DELETE" -> WireMock.delete(urlMatching(url));
+                    case "PATCH" -> WireMock.patch(urlMatching(url));
+                    case "HEAD" -> WireMock.head(urlMatching(url));
+                    default -> WireMock.any(urlMatching(url));
+                };
+                break;
+            case PATH_TEMPLATE:
+                // 对于路径模板，使用URL路径模板
+                builder = switch (method.toUpperCase()) {
+                    case "GET" -> WireMock.get(WireMock.urlPathTemplate(url));
+                    case "POST" -> WireMock.post(WireMock.urlPathTemplate(url));
+                    case "PUT" -> WireMock.put(WireMock.urlPathTemplate(url));
+                    case "DELETE" -> WireMock.delete(WireMock.urlPathTemplate(url));
+                    case "PATCH" -> WireMock.patch(WireMock.urlPathTemplate(url));
+                    case "HEAD" -> WireMock.head(WireMock.urlPathTemplate(url));
+                    default -> WireMock.any(WireMock.urlPathTemplate(url));
+                };
+                break;
+        }
+
+        return builder;
+
+    }
+
+    /**
+     * 获取响应的JSON字符串
+     */
+    @Transient
+    public String getResponseBody() {
+        try {
+            JsonNode responseNode = Json.getObjectMapper().readTree(responseDefinition);
+            return Json.getObjectMapper().writeValueAsString(responseNode);
+        } catch (Exception e) {
+            return responseDefinition;
+        }
+    }
+
+    /**
+     * 转换为WireMock的ResponseDefinition
+     */
+    @Transient
+    public com.github.tomakehurst.wiremock.http.ResponseDefinition toWireMockResponseDefinition() {
+        try {
+            JsonNode responseNode = Json.getObjectMapper().readTree(responseDefinition);
+            return Json.getObjectMapper().treeToValue(responseNode, com.github.tomakehurst.wiremock.http.ResponseDefinition.class);
+        } catch (Exception e) {
+            throw new RuntimeException("解析响应定义失败", e);
+        }
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
+        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
+        if (thisEffectiveClass != oEffectiveClass) return false;
+        StubMapping that = (StubMapping) o;
+        return getId() != null && Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public final int hashCode() {
+        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
+    }
+}
