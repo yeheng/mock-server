@@ -6,6 +6,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.wiremockui.service.WireMockManager;
@@ -60,8 +61,8 @@ public class WireMockConfig {
         }
 
         @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                FilterChain filterChain)
+        protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+                @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
 
             String requestURI = request.getRequestURI();

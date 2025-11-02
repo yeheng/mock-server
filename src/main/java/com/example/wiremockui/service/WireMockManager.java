@@ -1,38 +1,37 @@
 package com.example.wiremockui.service;
 
-import com.example.wiremockui.config.WireMockProperties;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.example.wiremockui.entity.StubMapping;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 全局WireMock管理器
  * 集成到Spring Boot的嵌入式Undertow容器中，不使用独立端口
  * 所有stub请求都通过同一个Undertow容器处理
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WireMockManager {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WireMockManager.class);
-
     @Value("${server.port:8080}")
     private int serverPort;
-
-    private final WireMockProperties properties;
 
     // 使用内存存储 stub mappings，而不是独立的 WireMockServer
     private final List<StubMapping> stubs = new CopyOnWriteArrayList<>();

@@ -1,26 +1,31 @@
 package com.example.wiremockui.filter;
 
+import java.io.IOException;
+
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
 import com.example.wiremockui.service.WireMockManager;
-import jakarta.servlet.*;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
 
 /**
  * WireMock Servlet Filter
  * 将匹配的请求路由到 WireMock 服务器
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Order(1) // 高优先级
 public class WireMockServletFilter implements Filter {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WireMockServletFilter.class);
 
     private final WireMockManager wireMockManager;
     

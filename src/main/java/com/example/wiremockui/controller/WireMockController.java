@@ -1,24 +1,29 @@
 package com.example.wiremockui.controller;
 
-import com.example.wiremockui.service.WireMockManager;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.wiremockui.service.WireMockManager;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * WireMock 全局状态 REST API 控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/wiremock")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class WireMockController {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WireMockController.class);
 
     private final WireMockManager wireMockManager;
     
