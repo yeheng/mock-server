@@ -116,6 +116,19 @@ public class StubMapping {
         if (responseDefinition == null) {
             throw new RuntimeException("响应定义不能为null");
         }
+
+        // 验证JSON格式
+        String trimmedResponse = responseDefinition.trim();
+        if (trimmedResponse.isEmpty()) {
+            throw new RuntimeException("响应定义不能为空");
+        }
+
+        // 简单的JSON格式验证
+        if (!(trimmedResponse.startsWith("{") && trimmedResponse.endsWith("}")) &&
+            !(trimmedResponse.startsWith("[") && trimmedResponse.endsWith("]"))) {
+            throw new RuntimeException("响应定义必须是有效的JSON格式");
+        }
+
         return responseDefinition;
     }
 }

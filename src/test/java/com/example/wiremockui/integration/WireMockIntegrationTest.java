@@ -9,7 +9,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
 
 import java.net.URI;
@@ -55,6 +57,9 @@ class WireMockIntegrationTest {
 
     @Autowired
     private WireMockManager wireMockManager;
+
+    @LocalServerPort
+    private int port;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -105,7 +110,7 @@ class WireMockIntegrationTest {
 
         // 5. 通过 HTTP 调用 stub 端点
         // 使用相同的端口和容器
-        String stubUrl = "http://localhost:" + wireMockManager.getPort() + "/api/test";
+        String stubUrl = "http://localhost:" + port + "/api/test";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(stubUrl))
                 .GET()
@@ -160,7 +165,7 @@ class WireMockIntegrationTest {
         Thread.sleep(1000);
 
         // 4. 调用 WireMock
-        String stubUrl = "http://localhost:" + wireMockManager.getPort() + "/api/users";
+        String stubUrl = "http://localhost:" + port + "/api/users";
         String requestBody = "{\"name\": \"张三\", \"email\": \"zhangsan@example.com\"}";
 
         HttpRequest request = HttpRequest.newBuilder()

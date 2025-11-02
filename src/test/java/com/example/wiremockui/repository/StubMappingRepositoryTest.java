@@ -30,6 +30,10 @@ class StubMappingRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        // 清理之前的数据 - 确保在事务中删除
+        repository.deleteAll();
+        repository.flush(); // 强制执行删除
+
         // 创建测试数据
         stub1 = createStub("用户查询接口", "获取用户信息", "GET", "/api/users", true, 0, "uuid-001");
         stub2 = createStub("创建用户接口", "创建新用户", "POST", "/api/users", true, 1, "uuid-002");
@@ -38,6 +42,7 @@ class StubMappingRepositoryTest {
 
         // 保存测试数据
         repository.saveAll(Arrays.asList(stub1, stub2, stub3, stub4));
+        repository.flush(); // 强制执行保存
     }
 
     // 辅助方法：创建 StubMapping 并设置时间戳
@@ -181,7 +186,7 @@ class StubMappingRepositoryTest {
         // 执行
         Long count = repository.countByEnabled(false);
 
-        // 验证
+        // 验证 - 只有1个禁用的stub (stub3)
         assertEquals(1L, count);
     }
 

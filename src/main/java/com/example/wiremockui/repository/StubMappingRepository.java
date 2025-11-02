@@ -35,8 +35,8 @@ public interface StubMappingRepository extends JpaRepository<StubMapping, Long> 
     StubMapping findByUuid(String uuid);
 
     /**
-     * 统计启用的 Stub 数量
+     * 根据启用状态统计 Stub 数量
      */
-    @Query("SELECT COUNT(s) FROM StubMapping s WHERE s.enabled = true")
+    @Query("SELECT COUNT(s) FROM StubMapping s WHERE s.enabled = :enabled")
     Long countByEnabled(Boolean enabled);
 }
