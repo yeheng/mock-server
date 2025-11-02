@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import com.example.wiremockui.entity.StubMapping;
@@ -81,7 +82,7 @@ public class WireMockManager {
     /**
      * 添加Stub Mapping
      */
-    public void addStubMapping(StubMapping stubMapping) {
+    public void addStubMapping(@NonNull StubMapping stubMapping) {
         try {
             if (!isRunning()) {
                 throw new IllegalStateException("WireMock服务器未运行");
@@ -111,7 +112,7 @@ public class WireMockManager {
     /**
      * 删除Stub Mapping
      */
-    public void removeStubMapping(StubMapping stubMapping) {
+    public void removeStubMapping(@NonNull StubMapping stubMapping) {
         try {
             if (!isRunning()) {
                 return;
@@ -128,7 +129,7 @@ public class WireMockManager {
     /**
      * 重新加载所有Stub Mappings
      */
-    public void reloadAllStubs(List<StubMapping> newStubs) {
+    public void reloadAllStubs(@NonNull List<StubMapping> newStubs) {
         try {
             if (!isRunning()) {
                 return;
@@ -179,7 +180,7 @@ public class WireMockManager {
      * 处理HTTP请求 - 返回模拟响应
      * 这个方法会被 Filter 调用，在同一个 Undertow 容器中处理请求
      */
-    public void handleRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws IOException {
+    public void handleRequest(@NonNull HttpServletRequest servletRequest, @NonNull HttpServletResponse servletResponse) throws IOException {
         if (!isRunning()) {
             servletResponse.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             servletResponse.getWriter().write("WireMock server is not running");
@@ -236,7 +237,7 @@ public class WireMockManager {
     /**
      * 查找匹配的 stub
      */
-    private StubMapping findMatchingStub(String path, String method) {
+    private StubMapping findMatchingStub(@NonNull String path, @NonNull String method) {
         return stubs.stream()
                 .filter(stub -> {
                     // 验证 stub 是否启用
@@ -278,7 +279,7 @@ public class WireMockManager {
     /**
      * 记录请求
      */
-    private void recordRequest(String path, String method) {
+    private void recordRequest(@NonNull String path, @NonNull String method) {
         String key = method + " " + path;
         requestLogs.computeIfAbsent(key, k -> new ArrayList<>());
         // 这里可以添加更详细的请求信息
@@ -287,7 +288,7 @@ public class WireMockManager {
     /**
      * 创建默认响应
      */
-    private String createDefaultResponse(StubMapping stub) {
+    private String createDefaultResponse(@NonNull StubMapping stub) {
         return String.format(
                 "{\"message\": \"Mocked response for %s\", \"stubName\": \"%s\", \"timestamp\": \"%s\"}",
                 stub.getName(),

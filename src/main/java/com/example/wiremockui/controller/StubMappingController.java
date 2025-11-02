@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/stubs")
+@RequestMapping("/admin/stubs")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class StubMappingController {
@@ -41,7 +41,7 @@ public class StubMappingController {
      * 创建新的 Stub
      */
     @PostMapping
-    public ResponseEntity<StubMapping> createStub(@Valid @RequestBody StubMapping stub) {
+    public ResponseEntity<StubMapping> createStub(@NonNull @Valid @RequestBody StubMapping stub) {
         try {
             StubMapping createdStub = stubMappingService.createStub(stub);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdStub);

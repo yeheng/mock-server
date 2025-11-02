@@ -14,7 +14,7 @@ import java.util.Map;
  * 健康检查控制器
  */
 @RestController
-@RequestMapping("/api/v1/health")
+@RequestMapping("/admin/health")
 @RequiredArgsConstructor
 public class HealthController {
     
