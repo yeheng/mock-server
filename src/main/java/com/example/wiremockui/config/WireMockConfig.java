@@ -104,8 +104,12 @@ public class WireMockConfig {
                     requestURI.contains(".gif");
         }
 
+        /**
+         * 判断是否为管理 API 请求（Spring Boot 应用自己的 API）
+         * 只有管理API使用 /api/v1/ 前缀，其他 /api/ 路径交给 WireMock 处理
+         */
         private boolean isApiRequest(String requestURI) {
-            return requestURI.startsWith("/api/") ||
+            return requestURI.startsWith("/api/v1/") ||
                     requestURI.startsWith("/actuator/") ||
                     requestURI.startsWith("/swagger") ||
                     requestURI.startsWith("/v3/api-docs");

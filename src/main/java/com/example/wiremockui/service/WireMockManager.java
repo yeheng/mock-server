@@ -201,7 +201,8 @@ public class WireMockManager {
             if (matchedStub != null) {
                 // 找到匹配的 stub，返回响应
                 servletResponse.setStatus(HttpServletResponse.SC_OK);
-                servletResponse.setHeader("Content-Type", "application/json");
+                servletResponse.setContentType("application/json;charset=UTF-8");
+                servletResponse.setCharacterEncoding("UTF-8");
 
                 String responseBody = matchedStub.getResponseDefinition();
                 if (responseBody == null || responseBody.trim().isEmpty()) {
@@ -213,7 +214,8 @@ public class WireMockManager {
             } else {
                 // 未找到匹配的 stub，返回 404
                 servletResponse.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                servletResponse.setHeader("Content-Type", "application/json");
+                servletResponse.setContentType("application/json;charset=UTF-8");
+                servletResponse.setCharacterEncoding("UTF-8");
                 servletResponse.getWriter().write(String.format(
                     "{\"error\": \"No matching stub\", \"path\": \"%s\", \"method\": \"%s\", \"message\": \"请检查 stub 配置\"}",
                     requestURI,
@@ -225,7 +227,8 @@ public class WireMockManager {
         } catch (Exception e) {
             log.error("处理WireMock请求时出错", e);
             servletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            servletResponse.setHeader("Content-Type", "application/json");
+            servletResponse.setContentType("application/json;charset=UTF-8");
+            servletResponse.setCharacterEncoding("UTF-8");
             servletResponse.getWriter().write("{\"error\": \"Internal server error\", \"message\": \"" + e.getMessage() + "\"}");
         }
     }
