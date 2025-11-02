@@ -295,7 +295,8 @@ class WireMockManagerTest {
 
         // 验证
         verify(servletResponse).setStatus(HttpServletResponse.SC_OK);
-        verify(servletResponse).setHeader("Content-Type", "application/json");
+        verify(servletResponse).setContentType("application/json;charset=UTF-8");
+        verify(servletResponse).setCharacterEncoding("UTF-8");
         verify(printWriter).write(testStub.getResponseDefinition());
     }
 
@@ -314,7 +315,8 @@ class WireMockManagerTest {
 
         // 验证
         verify(servletResponse).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(servletResponse).setHeader("Content-Type", "application/json");
+        verify(servletResponse).setContentType("application/json;charset=UTF-8");
+        verify(servletResponse).setCharacterEncoding("UTF-8");
         verify(printWriter).write(contains("No matching stub"));
     }
 
