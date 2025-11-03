@@ -7,7 +7,9 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.http.RequestMethod;
+import com.github.tomakehurst.wiremock.direct.DirectCallHttpServer;
+import com.github.tomakehurst.wiremock.direct.DirectCallHttpServerFactory;
+import com.github.tomakehurst.wiremock.http.*;
 import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
@@ -15,7 +17,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.Servlet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +25,8 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.InputStream;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -60,17 +58,12 @@ public class WireMockManager {
 
     // 内部 WireMockServer，用于实际匹配与生成响应
     private WireMockServer wireMockServer;
+    private DirectCallHttpServer directCallServer;
 
     @PostConstruct
     public void initialize() {
         try {
-            // 启动内部 WireMockServer（动态端口），用于匹配；应用端口仍为 serverPort
-            WireMockConfiguration config = WireMockConfiguration.options().dynamicPort();
-            wireMockServer = new WireMockServer(config);
-            wireMockServer.start();
-
-
-            isRunning = true;
+            startServer();
             port = serverPort;
 
             log.info("WireMock 集成: 内部 WireMockServer 端口={}, 应用端口={}", wireMockServer.port(), port);
@@ -79,6 +72,21 @@ public class WireMockManager {
             log.error("WireMock 初始化失败", e);
             throw new RuntimeException("WireMock 初始化失败", e);
         }
+    }
+
+    private synchronized void startServer() throws IllegalAccessException {
+        // 启动内部 WireMockServer（动态端口），用于匹配；应用端口仍为 serverPort
+
+        DirectCallHttpServerFactory factory = new DirectCallHttpServerFactory();
+
+        WireMockConfiguration config = WireMockConfiguration.options().dynamicPort()
+                .httpServerFactory(factory);
+        wireMockServer = new WireMockServer(config);
+        wireMockServer.start();
+
+        directCallServer = factory.getHttpServer();
+
+        isRunning = true;
     }
 
     @PreDestroy
@@ -111,7 +119,7 @@ public class WireMockManager {
      * 零网络开销，高性能
      */
     public void handleRequest(jakarta.servlet.http.HttpServletRequest servletRequest,
-                             jakarta.servlet.http.HttpServletResponse servletResponse)
+                              jakarta.servlet.http.HttpServletResponse servletResponse)
             throws IOException {
         if (!isRunning()) {
             servletResponse.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
@@ -122,24 +130,15 @@ public class WireMockManager {
         try {
             ensureWireMockServerStarted();
 
-            // 直接委托给内部的 WireMockServer 进行处理
-            // 但我们不走 HTTP 代理，而是使用本地方法调用
-            jakarta.servlet.http.HttpServletResponseWrapper responseWrapper =
-                new jakarta.servlet.http.HttpServletResponseWrapper(servletResponse) {
-                    @Override
-                    public jakarta.servlet.ServletOutputStream getOutputStream() throws IOException {
-                        return super.getOutputStream();
-                    }
+            // 1. 将 Undertow 请求转换为 WireMock 的 Request 对象
+            Request wiremockRequest = toWireMockRequest(servletRequest);
 
-                    @Override
-                    public java.io.PrintWriter getWriter() throws IOException {
-                        return super.getWriter();
-                    }
-                };
+            // 2. 【核心】在这里，我们调用的是 DirectCallHttpServer 上的 stubRequest 方法！
+            Response wiremockResponse = directCallServer.stubRequest(wiremockRequest);
 
-            // 创建并使用一个简单的 HTTP 服务器来处理请求
-            // 但更好的方法是利用 WireMockServer 的内部匹配能力
-            processDirectly(servletRequest, servletResponse);
+            // 3. 将 WireMock 的 Response 对象转换并写回 Undertow 的 exchange
+            fromWireMockResponse(wiremockResponse, servletResponse);
+
 
         } catch (Exception e) {
             log.error("处理WireMock请求时出错", e);
@@ -152,112 +151,81 @@ public class WireMockManager {
     }
 
     /**
-     * 直接处理请求而不使用网络代理
-     * 通过 HTTP 客户端调用本地服务，但避免复杂的代理逻辑
+     * 将 WireMock Response 转换并写入 Servlet Response
      */
-    private void processDirectly(jakarta.servlet.http.HttpServletRequest request,
-                                jakarta.servlet.http.HttpServletResponse response) throws IOException {
-        // 简化方案：仍然使用 HTTP 调用，但调用本地 WireMockServer
-        // 这样避免了复杂的代理逻辑，但保持了相对简单的架构
-        String method = request.getMethod().toUpperCase();
-        String requestURI = request.getRequestURI();
-        String query = request.getQueryString();
-        String targetUrl = "http://localhost:" + wireMockServer.port() + requestURI
-                           + (query != null ? ("?" + query) : "");
+    private void fromWireMockResponse(Response wiremockResponse, HttpServletResponse servletResponse)
+            throws IOException {
 
-        log.debug("直接调用本地 WireMockServer: {} {} -> {}", method, requestURI, targetUrl);
+        // 1. 设置状态码
+        servletResponse.setStatus(wiremockResponse.getStatus());
 
-        // 记录请求
-        recordRequest(requestURI, method);
-
-        try {
-            // 使用简单的 HTTP 客户端调用本地服务
-            // 这是最小化的修改，保持功能性的同时减少复杂性
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(targetUrl))
-                    .method(method, buildBodyPublisher(request));
-
-            // 复制请求头（过滤受限头）
-            java.util.Enumeration<String> headerNames = request.getHeaderNames();
-            if (headerNames != null) {
-                while (headerNames.hasMoreElements()) {
-                    String hn = headerNames.nextElement();
-                    if (hn == null)
-                        continue;
-                    if (isRestrictedHeader(hn))
-                        continue;
-                    String hv = request.getHeader(hn);
-                    if (hv != null) {
-                        builder.header(hn, hv);
-                    }
+        // 2. 设置响应头
+        HttpHeaders headers = wiremockResponse.getHeaders();
+        if (headers != null) {
+            for (HttpHeader header : headers.all()) {
+                String headerName = header.key();
+                for (String headerValue : header.values()) {
+                    // 使用 addHeader 支持多值头
+                    servletResponse.addHeader(headerName, headerValue);
                 }
             }
+        }
 
-            java.net.http.HttpResponse<byte[]> proxied = client.send(builder.build(),
-                    java.net.http.HttpResponse.BodyHandlers.ofByteArray());
-
-            // 写回响应
-            response.setStatus(proxied.statusCode());
-            response.setContentType("application/json;charset=UTF-8");
-            response.setCharacterEncoding("UTF-8");
-
-            String charset = "UTF-8";
-            var ctOpt = proxied.headers().firstValue("Content-Type");
-            if (ctOpt.isPresent()) {
-                String ct = ctOpt.get();
-                var m = java.util.regex.Pattern.compile("charset=([^;]+)",
-                        java.util.regex.Pattern.CASE_INSENSITIVE).matcher(ct);
-                if (m.find()) {
-                    charset = m.group(1).trim();
-                }
-            }
-            String bodyString;
-            try {
-                bodyString = new String(proxied.body(), java.nio.charset.Charset.forName(charset));
-            } catch (Exception ignore) {
-                bodyString = new String(proxied.body());
-            }
-
-            if (proxied.statusCode() == HttpServletResponse.SC_NOT_FOUND) {
-                bodyString = "{\"error\": \"No matching stub\"}";
-            }
-
-            response.getWriter().write(bodyString);
-
-        } catch (Exception e) {
-            log.error("直接处理请求失败", e);
-            throw new IOException("处理请求失败", e);
+        // 3. 写入响应体
+        byte[] body = wiremockResponse.getBody();
+        if (body != null && body.length > 0) {
+            servletResponse.getOutputStream().write(body);
+            servletResponse.getOutputStream().flush();
         }
     }
 
-    private java.net.http.HttpRequest.BodyPublisher buildBodyPublisher(jakarta.servlet.http.HttpServletRequest request) {
-        try {
-            String method = request.getMethod().toUpperCase();
-            if (method.equals("GET") || method.equals("DELETE") || method.equals("HEAD") || method.equals("OPTIONS")) {
-                return java.net.http.HttpRequest.BodyPublishers.noBody();
-            }
-            var is = request.getInputStream();
-            byte[] bytes = is != null ? is.readAllBytes() : new byte[0];
-            if (bytes.length == 0) {
-                return java.net.http.HttpRequest.BodyPublishers.noBody();
-            }
-            return java.net.http.HttpRequest.BodyPublishers.ofByteArray(bytes);
-        } catch (Exception e) {
-            log.error("读取请求体失败", e);
-            return java.net.http.HttpRequest.BodyPublishers.noBody();
-        }
-    }
+    /**
+     * 将 Servlet 请求转换为 WireMock Request 对象
+     */
+    private Request toWireMockRequest(HttpServletRequest servletRequest) throws IOException {
+        // 1. 提取请求方法
+        RequestMethod method = RequestMethod.fromString(servletRequest.getMethod());
 
-    private boolean isRestrictedHeader(String headerName) {
-        if (headerName == null)
-            return true;
-        String name = headerName.toLowerCase();
-        return name.equals("connection") ||
-               name.equals("content-length") ||
-               name.equals("expect") ||
-               name.equals("host") ||
-               name.equals("upgrade");
+        // 2. 构建绝对 URL
+        String absoluteUrl = servletRequest.getRequestURL().toString();
+        String queryString = servletRequest.getQueryString();
+        if (queryString != null && !queryString.isEmpty()) {
+            absoluteUrl = absoluteUrl + "?" + queryString;
+        }
+
+        // 3. 提取 Headers - 转换为 WireMock 的 HttpHeaders
+        List<HttpHeader> headerList = new ArrayList<>();
+        Enumeration<String> headerNames = servletRequest.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            Enumeration<String> headerValues = servletRequest.getHeaders(headerName);
+            List<String> values = Collections.list(headerValues);
+            headerList.add(new HttpHeader(headerName, values));
+        }
+        HttpHeaders headers = new HttpHeaders(headerList);
+
+        // 4. 提取请求体
+        byte[] body;
+        try (InputStream inputStream = servletRequest.getInputStream()) {
+            body = inputStream.readAllBytes();
+        }
+
+        // 5. 获取客户端 IP
+        String clientIp = servletRequest.getRemoteAddr();
+
+        // 6. 获取协议
+        String protocol = servletRequest.getProtocol();
+
+        // 7. 使用 ImmutableRequest.Builder 构造 Request 对象
+        return ImmutableRequest.create()
+                .withAbsoluteUrl(absoluteUrl)
+                .withMethod(method)
+                .withProtocol(protocol)
+                .withClientIp(clientIp)
+                .withHeaders(headers)
+                .withBody(body)
+                .withBrowserProxyRequest(false)
+                .build();
     }
 
     /**
@@ -380,15 +348,6 @@ public class WireMockManager {
             wireMockServer.resetAll();
         }
         log.info("WireMock服务器已重置");
-    }
-
-    /**
-     * 记录请求
-     */
-    private void recordRequest(@NonNull String path, @NonNull String method) {
-        String key = method + " " + path;
-        requestLogs.computeIfAbsent(key, k -> new ArrayList<>());
-        // 这里可以添加更详细的请求信息
     }
 
     /**
@@ -542,11 +501,9 @@ public class WireMockManager {
         return builder;
     }
 
-    private void ensureWireMockServerStarted() {
+    private void ensureWireMockServerStarted() throws IllegalAccessException {
         if (wireMockServer == null || !wireMockServer.isRunning()) {
-            WireMockConfiguration config = WireMockConfiguration.options().dynamicPort();
-            wireMockServer = new com.github.tomakehurst.wiremock.WireMockServer(config);
-            wireMockServer.start();
+            startServer();
         }
     }
 }
