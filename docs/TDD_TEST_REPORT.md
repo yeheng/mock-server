@@ -376,12 +376,14 @@ private StubMapping findMatchingStub(String path, String method,
 ### 📊 测试现状
 
 #### 通过的测试 (131个)
+
 - ✅ 单元测试: 65个
 - ✅ 服务层测试: 44个
 - ✅ 集成测试 P0: 14个
 - ✅ Controller测试: 8个
 
 #### 待实现功能测试 (21个)
+
 - ⏳ URL匹配模式: 4个
 - ⏳ 请求头匹配: 4个
 - ⏳ 查询参数匹配: 4个
@@ -413,6 +415,7 @@ private StubMapping findMatchingStub(String path, String method,
 ### 📈 实施建议
 
 #### 短期 (1-2周)
+
 1. **优先实现 URL 匹配模式** (P1)
    - 影响面大，使用频繁
    - 实现 CONTAINS, REGEX, PATH_TEMPLATE
@@ -423,6 +426,7 @@ private StubMapping findMatchingStub(String path, String method,
    - 预计工作量: 1-2天
 
 #### 中期 (2-4周)
+
 3. **请求头和查询参数匹配** (P1)
    - 常用功能，提升匹配精确度
    - 预计工作量: 3-4天
@@ -432,6 +436,7 @@ private StubMapping findMatchingStub(String path, String method,
    - 预计工作量: 2-3天
 
 #### 长期 (1-2月)
+
 5. **请求体匹配** (P1)
    - 复杂度较高，需要 JSON/XML 解析
    - 预计工作量: 4-5天
@@ -457,6 +462,7 @@ private StubMapping findMatchingStub(String path, String method,
 ## 附录：测试文件清单
 
 ### 集成测试文件
+
 1. `AdminApiE2ETest.java` - Admin API 端到端测试 (6个测试) ✅
 2. `FilterRoutingAndMethodsTest.java` - Filter 路由测试 (8个测试) ✅
 3. `UrlMatchingPatternsTest.java` - URL 匹配模式测试 (4个测试) ⏳
@@ -467,6 +473,7 @@ private StubMapping findMatchingStub(String path, String method,
 8. `StubPriorityTest.java` - 优先级测试 (5个测试) ⏳
 
 ### 运行指令
+
 ```bash
 # 运行所有测试
 mvn clean test
