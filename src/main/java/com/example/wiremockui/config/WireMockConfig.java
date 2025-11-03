@@ -67,7 +67,7 @@ public class WireMockConfig {
 
             String requestURI = request.getRequestURI();
 
-            // 跳过静态资源和 API 请求，让 Spring MVC 处理
+            // 跳过静态资源和 管理 API 白名单，让 Spring MVC 处理
             if (isStaticResource(requestURI) || isApiRequest(requestURI)) {
                 filterChain.doFilter(request, response);
                 return;
@@ -109,7 +109,10 @@ public class WireMockConfig {
          * 管理API使用 /admin/ 前缀，其他路径交给 WireMock 处理
          */
         private boolean isApiRequest(String requestURI) {
-            return requestURI.startsWith("/admin/") ||
+            // 仅允许具体的管理端点由 Spring MVC 处理，其他 /admin/* 交给 WireMock
+            return requestURI.startsWith("/admin/health") ||
+                    requestURI.startsWith("/admin/wiremock") ||
+                    requestURI.startsWith("/admin/stubs") ||
                     requestURI.startsWith("/actuator/") ||
                     requestURI.startsWith("/swagger") ||
                     requestURI.startsWith("/v3/api-docs");

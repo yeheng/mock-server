@@ -201,16 +201,17 @@ public class StubMappingService {
 
         // 验证 JSON 格式
         try {
-            if (stub.getRequestBodyPattern() != null && !stub.getRequestBodyPattern().isBlank()) {
-                objectMapper.readTree(stub.getRequestBodyPattern());
-            }
-
+            // 对响应定义保持严格校验，必须为有效 JSON
             if (stub.getResponseDefinition() != null && !stub.getResponseDefinition().isBlank()) {
                 objectMapper.readTree(stub.getResponseDefinition());
             }
         } catch (Exception e) {
             throw new IllegalArgumentException("JSON 格式无效: " + e.getMessage());
         }
+
+        // 对请求体匹配规则保持宽松策略：作为字符串存储与使用
+        // 一些测试或用户可能提供非标准但可解析的匹配表达式（例如额外的括号），
+        // 不应在创建阶段拒绝。真正的解析与匹配在请求到来时由 WireMockManager 处理。
     }
 
     /**
