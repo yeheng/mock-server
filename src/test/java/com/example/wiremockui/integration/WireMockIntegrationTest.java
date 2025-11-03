@@ -1,27 +1,25 @@
 package com.example.wiremockui.integration;
 
-import com.example.wiremockui.WiremockUiApplication;
-import com.example.wiremockui.entity.StubMapping;
-import com.example.wiremockui.repository.StubMappingRepository;
-import com.example.wiremockui.service.StubMappingService;
-import com.example.wiremockui.service.WireMockManager;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.TestPropertySource;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.TestPropertySource;
+
+import com.example.wiremockui.WiremockUiApplication;
+import com.example.wiremockui.entity.StubMapping;
+import com.example.wiremockui.repository.StubMappingRepository;
+import com.example.wiremockui.service.StubMappingService;
+import com.example.wiremockui.service.WireMockManager;
 
 /**
  * WireMock 集成测试
