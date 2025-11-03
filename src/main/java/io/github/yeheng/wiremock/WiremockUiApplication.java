@@ -5,12 +5,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * WireMock UI 管理应用主类
  * 提供 Web UI 界面来管理 WireMock stubs
  */
 @SpringBootApplication
+@EnableJpaRepositories
 @EnableConfigurationProperties(WireMockProperties.class)
 @ConfigurationPropertiesScan
 public class WiremockUiApplication {
