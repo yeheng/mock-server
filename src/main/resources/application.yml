@@ -58,7 +58,7 @@ management:
 # 日志配置
 logging:
   level:
-    com.example.wiremockui: INFO
+    io.github.yeheng.wiremock: INFO
     org.springframework.web: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
