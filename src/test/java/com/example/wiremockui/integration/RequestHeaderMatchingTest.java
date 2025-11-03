@@ -2,7 +2,6 @@ package com.example.wiremockui.integration;
 
 import com.example.wiremockui.WiremockUiApplication;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -60,7 +59,6 @@ class RequestHeaderMatchingTest {
     }
 
     @Test
-    @Disabled("待实现：WireMockManager 需要支持请求头匹配")
     @DisplayName("P1场景5: Authorization 请求头匹配")
     void testAuthorizationHeaderMatching() throws Exception {
         Thread.sleep(2000);
@@ -120,7 +118,6 @@ class RequestHeaderMatchingTest {
     }
 
     @Test
-    @Disabled("待实现：WireMockManager 需要支持请求头匹配")
     @DisplayName("P1场景6: Content-Type 请求头匹配")
     void testContentTypeHeaderMatching() throws Exception {
         Thread.sleep(2000);
@@ -170,7 +167,6 @@ class RequestHeaderMatchingTest {
     }
 
     @Test
-    @Disabled("待实现：WireMockManager 需要支持请求头匹配")
     @DisplayName("P1场景7: 自定义请求头匹配")
     void testCustomHeaderMatching() throws Exception {
         Thread.sleep(2000);
@@ -221,7 +217,6 @@ class RequestHeaderMatchingTest {
     }
 
     @Test
-    @Disabled("待实现：WireMockManager 需要支持多个请求头匹配")
     @DisplayName("P1场景8: 多个请求头组合匹配")
     void testMultipleHeadersMatching() throws Exception {
         Thread.sleep(2000);

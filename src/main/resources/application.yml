@@ -6,14 +6,14 @@ server:
 spring:
   application:
     name: wiremock-ui-manager
-  
+
   # H2 数据库配置
   datasource:
     url: jdbc:h2:mem:wiremockdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: password
-  
+
   # JPA 配置
   jpa:
     hibernate:
@@ -22,45 +22,21 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-        format_sql: true
-        use_sql_comments: true
-  
+        format_sql: false
+        use_sql_comments: false
+
   # H2 控制台 (开发环境)
   h2:
     console:
       enabled: true
       path: /h2-console
-  
-  # Thymeleaf 配置
-  thymeleaf:
-    cache: false
-    encoding: UTF-8
-    mode: HTML
-    prefix: classpath:/templates/
-    suffix: .html
-  
+
   # JSON 配置
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
     indentation:
       enabled: true
-
-# WireMock 配置 (集成模式)
-wiremock:
-  # 集成模式：WireMock 使用 Spring Boot 相同的端口 (默认 8080)
-  # 设置为 0 表示使用 Spring Boot 端口，不启动独立服务器
-  port: 0
-  # 是否为集成模式 (true 表示集成到 Undertow 容器中)
-  integrated-mode: true
-  # 需要代理的目标服务器 (可选)
-  target-server-url: ""
-  # 保存 stub 文件的目录
-  stub-storage-directory: "./wiremock-stubs"
-  # 启用 WireMock 管理页面 (集成模式下建议禁用)
-  enable-admin-ui: false
-  # 记录请求日志
-  request-logging-enabled: true
 
 # 管理端点配置
 management:
@@ -84,19 +60,8 @@ logging:
   level:
     com.example.wiremockui: INFO
     org.springframework.web: INFO
-    org.wiremock: DEBUG
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/wiremock-ui.log
-
-# 应用自定义配置
-app:
-  # API 基础路径
-  api:
-    base-path: /api/v1
-  # UI 配置
-  ui:
-    page-size: 20
-    enable-dev-mode: true

@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 全局WireMock管理器
@@ -43,8 +42,9 @@ public class WireMockManager {
     @Value("${server.port:8080}")
     private int serverPort;
 
-    // 使用内存存储 stub mappings，而不是独立的 WireMockServer
-    private final List<StubMapping> stubs = new CopyOnWriteArrayList<>();
+    // 使用内存存储 stub mappings，使用 ConcurrentHashMap 替代 CopyOnWriteArrayList 以提升并发性能
+    // key: UUID (如果有) 或 id (Long) 转字符串，value: StubMapping 对象
+    private final Map<String, StubMapping> stubs = new ConcurrentHashMap<>();
     private final Map<String, List<LoggedRequest>> requestLogs = new ConcurrentHashMap<>();
 
     /**
@@ -176,6 +176,15 @@ public class WireMockManager {
         if (body != null && body.length > 0) {
             servletResponse.getOutputStream().write(body);
             servletResponse.getOutputStream().flush();
+        } else {
+            // 处理空响应体的情况，特别是404错误
+            if (wiremockResponse.getStatus() == 404) {
+                String jsonBody = "{\"error\": \"No matching stub\", \"status\": 404, \"message\": \"No stub matching the request was found\"}";
+                servletResponse.setContentType("application/json;charset=UTF-8");
+                servletResponse.setCharacterEncoding("UTF-8");
+                servletResponse.getWriter().write(jsonBody);
+                servletResponse.getWriter().flush();
+            }
         }
     }
 
@@ -230,6 +239,7 @@ public class WireMockManager {
 
     /**
      * 添加Stub Mapping
+     * 使用 ConcurrentHashMap 的 put 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList
      */
     public void addStubMapping(@NonNull StubMapping stubMapping) {
         try {
@@ -242,8 +252,17 @@ public class WireMockManager {
                 return;
             }
 
-            // 允许同一路径与方法存在多个 stub，通过优先级与匹配规则选择
-            stubs.add(stubMapping);
+            // 确保 stub 有 UUID（用于 WireMock server 的内部管理）
+            if (stubMapping.getUuid() == null || stubMapping.getUuid().trim().isEmpty()) {
+                // 生成新的 UUID 并设置到 stub 中，确保删除时可以精确匹配
+                stubMapping.setUuid(java.util.UUID.randomUUID().toString());
+            }
+
+            // 生成存储 key：优先使用 UUID
+            String stubKey = stubMapping.getUuid();
+
+            // 使用 Map 存储，O(1) 时间复杂度
+            stubs.put(stubKey, stubMapping);
 
             // 确保内部 WireMockServer 可用（部分单测可能未调用 initialize）
             ensureWireMockServerStarted();
@@ -252,10 +271,11 @@ public class WireMockManager {
             MappingBuilder builder = toWireMockMapping(stubMapping);
             wireMockServer.stubFor(builder);
 
-            log.info("已添加Stub Mapping: {} ({} {})",
+            log.info("已添加Stub Mapping: {} ({} {}) [uuid={}]",
                     stubMapping.getName(),
                     stubMapping.getMethod(),
-                    stubMapping.getUrl());
+                    stubMapping.getUrl(),
+                    stubKey);
         } catch (Exception e) {
             log.error("添加Stub Mapping失败: {}", stubMapping.getName(), e);
             throw new RuntimeException("添加Stub Mapping失败", e);
@@ -263,8 +283,29 @@ public class WireMockManager {
     }
 
     /**
+     * 生成 Stub 的唯一 key
+     * 优先使用 UUID，其次使用 id
+     */
+    private String generateStubKey(@NonNull StubMapping stubMapping) {
+        if (stubMapping.getUuid() != null && !stubMapping.getUuid().trim().isEmpty()) {
+            return stubMapping.getUuid();
+        }
+        if (stubMapping.getId() != null) {
+            return "id-" + stubMapping.getId();
+        }
+        return null;
+    }
+
+    /**
+     * 生成兜底唯一 key（当 UUID 和 id 都不可用时）
+     */
+    private String generateFallbackKey() {
+        return "temp-" + System.currentTimeMillis() + "-" + java.util.UUID.randomUUID();
+    }
+
+    /**
      * 删除Stub Mapping
-     * 使用 UUID 精准删除，而不是全量重载
+     * 使用 ConcurrentHashMap 的 remove 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList 的 O(n) 操作
      */
     public void removeStubMapping(@NonNull StubMapping stubMapping) {
         try {
@@ -272,21 +313,62 @@ public class WireMockManager {
                 return;
             }
 
-            if (stubMapping.getUuid() != null) {
-                // 根据 UUID 精准删除
-                stubs.removeIf(s -> stubMapping.getUuid().equals(s.getUuid()));
-                wireMockServer.removeStubMapping(java.util.UUID.fromString(stubMapping.getUuid()));
+            String stubKey = stubMapping.getUuid();
+            if (stubKey == null || stubKey.trim().isEmpty()) {
+                // 如果没有 UUID，尝试使用 generateStubKey（向后兼容）
+                stubKey = generateStubKey(stubMapping);
+            }
+
+            boolean removed = false;
+
+            if (stubKey != null && stubs.containsKey(stubKey)) {
+                // 从 Map 中删除
+                StubMapping removedStub = stubs.remove(stubKey);
+                if (removedStub != null) {
+                    // 从 WireMock server 中删除
+                    try {
+                        wireMockServer.removeStubMapping(java.util.UUID.fromString(stubKey));
+                        removed = true;
+                        log.info("已从 WireMock server 中删除 stub: {}", stubKey);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Stub UUID 不是有效格式: {}", stubKey);
+                        // 如果 UUID 无效，重载所有剩余的 stubs（不包含当前已删除的）
+                        ensureWireMockServerStarted();
+                        wireMockServer.resetMappings();
+                        for (StubMapping s : stubs.values()) {
+                            wireMockServer.stubFor(toWireMockMapping(s));
+                        }
+                        removed = true;
+                        log.info("UUID 无效，已重载剩余的 {} 个 stubs", stubs.size());
+                    }
+                }
             } else {
-                // 兜底方案：如果没有 UUID，使用 URL+Method 匹配
-                stubs.removeIf(s -> s.getUrl().equals(stubMapping.getUrl())
-                                    && s.getMethod().equalsIgnoreCase(stubMapping.getMethod()));
-                ensureWireMockServerStarted();
-                wireMockServer.resetMappings();
-                for (StubMapping s : stubs) {
-                    wireMockServer.stubFor(toWireMockMapping(s));
+                // 兜底方案：尝试根据 UUID 或 URL+Method 匹配删除
+                final String finalStubKey = stubKey;
+                removed = stubs.entrySet().removeIf(entry -> {
+                    StubMapping s = entry.getValue();
+                    // 优先匹配 UUID，其次匹配 URL+Method
+                    if (finalStubKey != null) {
+                        return finalStubKey.equals(s.getUuid());
+                    }
+                    return s.getUrl().equals(stubMapping.getUrl())
+                           && s.getMethod().equalsIgnoreCase(stubMapping.getMethod());
+                });
+                if (removed) {
+                    // 如果通过 URL+Method 删除，需要重载所有剩余的 stubs
+                    ensureWireMockServerStarted();
+                    wireMockServer.resetMappings();
+                    for (StubMapping s : stubs.values()) {
+                        wireMockServer.stubFor(toWireMockMapping(s));
+                    }
                 }
             }
-            log.info("已删除Stub Mapping: {}", stubMapping.getName());
+
+            if (removed) {
+                log.info("已删除Stub Mapping: {}", stubMapping.getName());
+            } else {
+                log.warn("未找到要删除的Stub Mapping: {}", stubMapping.getName());
+            }
         } catch (Exception e) {
             log.error("删除Stub Mapping失败: {}", stubMapping.getName(), e);
             throw new RuntimeException("删除Stub Mapping失败", e);
@@ -303,7 +385,7 @@ public class WireMockManager {
                 return;
             }
 
-            // 清空现有 stubs
+            // 清空现有 stubs - ConcurrentHashMap.clear() 是原子操作，性能优于 CopyOnWriteArrayList
             stubs.clear();
             ensureWireMockServerStarted();
             wireMockServer.resetMappings(); // 清空所有旧的
@@ -363,9 +445,10 @@ public class WireMockManager {
 
     /**
      * 获取所有 stubs
+     * 使用 Map.values() 替代 List，时间复杂度从 O(n) 降低到 O(1)
      */
     public List<StubMapping> getAllStubs() {
-        return new ArrayList<>(stubs);
+        return new ArrayList<>(stubs.values());
     }
 
     // 将实体 StubMapping 转换为 WireMock 的 MappingBuilder

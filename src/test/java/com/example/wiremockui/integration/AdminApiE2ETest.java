@@ -53,15 +53,16 @@ class AdminApiE2ETest {
     @AfterEach
     void cleanup() throws Exception {
         // 清理所有 stubs - 通过 Admin API
-        try {
-            HttpRequest deleteRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:" + port + "/admin/wiremock/reset"))
-                    .POST(HttpRequest.BodyPublishers.noBody())
-                    .build();
-            httpClient.send(deleteRequest, HttpResponse.BodyHandlers.ofString());
-        } catch (Exception e) {
-            // 忽略清理错误
-        }
+        // 临时禁用，看看是否会触发重置
+        //  try {
+        //      HttpRequest deleteRequest = HttpRequest.newBuilder()
+        //              .uri(URI.create("http://localhost:" + port + "/admin/wiremock/reset"))
+        //              .POST(HttpRequest.BodyPublishers.noBody())
+        //              .build();
+        //      httpClient.send(deleteRequest, HttpResponse.BodyHandlers.ofString());
+        //  } catch (Exception e) {
+        //      // 忽略清理错误
+        //  }
     }
 
     @Test
