@@ -1,20 +1,18 @@
 package com.example.wiremockui.service;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.example.wiremockui.entity.StubMapping;
+import com.example.wiremockui.repository.StubMappingRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.wiremockui.entity.StubMapping;
-import com.example.wiremockui.repository.StubMappingRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * StubMapping 服务类
@@ -202,7 +200,7 @@ public class StubMappingService {
         // 验证 JSON 格式
         try {
             // 对响应定义保持严格校验，必须为有效 JSON
-            if (stub.getResponseDefinition() != null && !stub.getResponseDefinition().isBlank()) {
+            if (!stub.getResponseDefinition().isBlank()) {
                 objectMapper.readTree(stub.getResponseDefinition());
             }
         } catch (Exception e) {
@@ -217,27 +215,6 @@ public class StubMappingService {
     /**
      * Stub 统计信息
      */
-    public static class StubStatistics {
-        private final long totalStubs;
-        private final long enabledStubs;
-        private final long disabledStubs;
-
-        public StubStatistics(long totalStubs, long enabledStubs, long disabledStubs) {
-            this.totalStubs = totalStubs;
-            this.enabledStubs = enabledStubs;
-            this.disabledStubs = disabledStubs;
-        }
-
-        public long getTotalStubs() {
-            return totalStubs;
-        }
-
-        public long getEnabledStubs() {
-            return enabledStubs;
-        }
-
-        public long getDisabledStubs() {
-            return disabledStubs;
-        }
+    public record StubStatistics(long totalStubs, long enabledStubs, long disabledStubs) {
     }
 }

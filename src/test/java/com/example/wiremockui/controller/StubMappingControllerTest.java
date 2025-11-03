@@ -393,9 +393,9 @@ class StubMappingControllerTest {
         // 验证
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(10, Objects.requireNonNull(response.getBody()).getTotalStubs());
-        assertEquals(7, response.getBody().getEnabledStubs());
-        assertEquals(3, response.getBody().getDisabledStubs());
+        assertEquals(10, Objects.requireNonNull(response.getBody()).totalStubs());
+        assertEquals(7, response.getBody().enabledStubs());
+        assertEquals(3, response.getBody().disabledStubs());
     }
 
     @Test

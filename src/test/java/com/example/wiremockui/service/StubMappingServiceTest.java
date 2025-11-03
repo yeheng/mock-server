@@ -414,9 +414,9 @@ class StubMappingServiceTest {
 
         // 验证
         assertNotNull(stats);
-        assertEquals(10, stats.getTotalStubs());
-        assertEquals(7, stats.getEnabledStubs());
-        assertEquals(3, stats.getDisabledStubs());
+        assertEquals(10, stats.totalStubs());
+        assertEquals(7, stats.enabledStubs());
+        assertEquals(3, stats.disabledStubs());
         verify(stubMappingRepository).count();
         verify(stubMappingRepository).countByEnabled(true);
     }
@@ -456,8 +456,8 @@ class StubMappingServiceTest {
         StubMappingService.StubStatistics stats = new StubMappingService.StubStatistics(10, 7, 3);
 
         // 验证
-        assertEquals(10, stats.getTotalStubs());
-        assertEquals(7, stats.getEnabledStubs());
-        assertEquals(3, stats.getDisabledStubs());
+        assertEquals(10, stats.totalStubs());
+        assertEquals(7, stats.enabledStubs());
+        assertEquals(3, stats.disabledStubs());
     }
 }

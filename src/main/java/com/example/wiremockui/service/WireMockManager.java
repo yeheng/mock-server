@@ -1,37 +1,37 @@
 package com.example.wiremockui.service;
 
-import java.io.BufferedReader;
+import com.example.wiremockui.entity.StubMapping;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
+import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Service;
-
-import com.example.wiremockui.entity.StubMapping;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.verification.LoggedRequest;
-import com.github.tomakehurst.wiremock.client.MappingBuilder;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
-import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.matching.UrlPattern;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 全局WireMock管理器
@@ -50,7 +50,12 @@ public class WireMockManager {
     private final List<StubMapping> stubs = new CopyOnWriteArrayList<>();
     private final Map<String, List<LoggedRequest>> requestLogs = new ConcurrentHashMap<>();
 
-    private boolean isRunning = false;
+    /**
+     * -- GETTER --
+     * 获取WireMock服务器状态
+     */
+    @Getter
+    private volatile boolean isRunning = false;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -102,13 +107,6 @@ public class WireMockManager {
     }
 
     /**
-     * 获取WireMock服务器状态
-     */
-    public boolean isRunning() {
-        return isRunning;
-    }
-
-    /**
      * 添加Stub Mapping
      */
     public void addStubMapping(@NonNull StubMapping stubMapping) {
@@ -152,7 +150,7 @@ public class WireMockManager {
             }
 
             stubs.removeIf(s -> s.getUrl().equals(stubMapping.getUrl())
-                    && s.getMethod().equalsIgnoreCase(stubMapping.getMethod()));
+                                && s.getMethod().equalsIgnoreCase(stubMapping.getMethod()));
             ensureWireMockServerStarted();
             wireMockServer.resetAll();
             for (StubMapping s : stubs) {
@@ -238,7 +236,7 @@ public class WireMockManager {
             String requestURI = servletRequest.getRequestURI();
             String query = servletRequest.getQueryString();
             String targetUrl = "http://localhost:" + wireMockServer.port() + requestURI
-                    + (query != null ? ("?" + query) : "");
+                               + (query != null ? ("?" + query) : "");
 
             log.debug("代理到内部 WireMockServer: {} {} -> {}", method, requestURI, targetUrl);
 
@@ -342,23 +340,18 @@ public class WireMockManager {
     private MappingBuilder toWireMockMapping(@NonNull StubMapping stub) {
         UrlPattern urlPattern;
         String url = stub.getUrl();
-        switch (stub.getUrlMatchType()) {
-            case EQUALS:
-                urlPattern = WireMock.urlEqualTo(url);
-                break;
-            case CONTAINS:
-                urlPattern = WireMock.urlMatching(".*" + java.util.regex.Pattern.quote(url) + ".*");
-                break;
-            case REGEX:
-                urlPattern = WireMock.urlMatching(url);
-                break;
-            case PATH_TEMPLATE:
-                String regex = url.replaceAll("\\{[^}]+\\}", "[^/]+");
-                urlPattern = WireMock.urlPathMatching("^" + regex + "$");
-                break;
-            default:
-                urlPattern = WireMock.urlEqualTo(url);
-        }
+        urlPattern = switch (stub.getUrlMatchType()) {
+            case EQUALS ->
+                // 使用 urlPathEqualTo 仅匹配路径部分，不包括查询字符串
+                    WireMock.urlPathEqualTo(url);
+            case CONTAINS -> WireMock.urlMatching(".*" + java.util.regex.Pattern.quote(url) + ".*");
+            case REGEX -> WireMock.urlMatching(url);
+            case PATH_TEMPLATE -> {
+                String regex = url.replaceAll("\\{[^}]+}", "[^/]+");
+                log.info("路径模板转换: {} -> 正则: {}", url, regex);
+                yield WireMock.urlPathMatching("^" + regex + "$");
+            }
+        };
 
         RequestMethod method;
         try {
@@ -375,9 +368,8 @@ public class WireMockManager {
         if (headersPattern != null && !headersPattern.trim().isEmpty()) {
             try {
                 JsonNode headerPatterns = objectMapper.readTree(headersPattern);
-                Iterator<Map.Entry<String, JsonNode>> fields = headerPatterns.fields();
-                while (fields.hasNext()) {
-                    Map.Entry<String, JsonNode> entry = fields.next();
+                Set<Map.Entry<String, JsonNode>> fields = headerPatterns.properties();
+                for (Map.Entry<String, JsonNode> entry : fields) {
                     String name = entry.getKey();
                     JsonNode rule = entry.getValue();
                     if (rule.has("equalTo")) {
@@ -398,9 +390,8 @@ public class WireMockManager {
         if (queryParamsPattern != null && !queryParamsPattern.trim().isEmpty()) {
             try {
                 JsonNode paramPatterns = objectMapper.readTree(queryParamsPattern);
-                Iterator<Map.Entry<String, JsonNode>> fields = paramPatterns.fields();
-                while (fields.hasNext()) {
-                    Map.Entry<String, JsonNode> entry = fields.next();
+                Set<Map.Entry<String, JsonNode>> fields = paramPatterns.properties();
+                for (Map.Entry<String, JsonNode> entry : fields) {
                     String name = entry.getKey();
                     JsonNode rule = entry.getValue();
                     if (rule.has("equalTo")) {
@@ -419,20 +410,45 @@ public class WireMockManager {
         String bodyPattern = stub.getRequestBodyPattern();
         if (bodyPattern != null && !bodyPattern.trim().isEmpty()) {
             try {
+                // 尝试直接解析JSON
                 JsonNode bodyRule = objectMapper.readTree(bodyPattern);
                 if (bodyRule.has("equalToJson")) {
                     builder = builder
                             .withRequestBody(new EqualToJsonPattern(bodyRule.get("equalToJson").asText(), true, true));
+                    log.debug("添加请求体匹配: equalToJson");
                 } else if (bodyRule.has("matchesJsonPath")) {
                     builder = builder
                             .withRequestBody(WireMock.matchingJsonPath(bodyRule.get("matchesJsonPath").asText()));
+                    log.debug("添加请求体匹配: matchesJsonPath");
                 } else if (bodyRule.has("contains")) {
-                    builder = builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
+                    String containsText = bodyRule.get("contains").asText();
+                    builder = builder.withRequestBody(WireMock.containing(containsText));
+                    log.debug("添加请求体匹配: contains={}", containsText);
                 } else if (bodyRule.has("matches")) {
-                    builder = builder.withRequestBody(WireMock.matching(bodyRule.get("matches").asText()));
+                    String regex = bodyRule.get("matches").asText();
+                    builder = builder.withRequestBody(WireMock.matching(regex));
+                    log.info("添加请求体正则匹配: regex={}", regex);
                 }
-            } catch (Exception ignore) {
-                // 宽松处理：作为包含匹配
+            } catch (com.fasterxml.jackson.core.JsonParseException e) {
+                // JSON解析失败，尝试修复常见的转义问题后重试
+                try {
+                    // 将单个反斜杠转换为双反斜杠（JSON转义）
+                    String fixedPattern = bodyPattern.replace("\\", "\\\\");
+                    JsonNode bodyRule = objectMapper.readTree(fixedPattern);
+                    if (bodyRule.has("matches")) {
+                        String regex = bodyRule.get("matches").asText();
+                        builder = builder.withRequestBody(WireMock.matching(regex));
+                        log.info("添加请求体正则匹配（修复转义后）: regex={}", regex);
+                    } else if (bodyRule.has("contains")) {
+                        builder = builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
+                    }
+                } catch (Exception ex) {
+                    log.warn("转义解析 json请求体匹配模式失败，使用包含匹配作为兜底: pattern={}, error={}", bodyPattern, ex.getMessage());
+                    builder = builder.withRequestBody(WireMock.containing(bodyPattern));
+                }
+            } catch (Exception e) {
+                // 其他异常：作为包含匹配
+                log.warn("解析请求体匹配模式失败，使用包含匹配作为兜底: pattern={}, error={}", bodyPattern, e.getMessage());
                 builder = builder.withRequestBody(WireMock.containing(bodyPattern));
             }
         }
@@ -463,15 +479,20 @@ public class WireMockManager {
         try {
             String method = request.getMethod().toUpperCase();
             if (method.equals("GET") || method.equals("DELETE") || method.equals("HEAD") || method.equals("OPTIONS")) {
+                log.debug("{} 请求，无请求体", method);
                 return HttpRequest.BodyPublishers.noBody();
             }
             var is = request.getInputStream();
             byte[] bytes = is != null ? is.readAllBytes() : new byte[0];
+            log.info("读取请求体: {} 字节, method={}, content={}", bytes.length, method,
+                    bytes.length > 0 ? new String(bytes) : "empty");
             if (bytes.length == 0) {
+                log.warn("POST/PUT/PATCH 请求但请求体为空");
                 return HttpRequest.BodyPublishers.noBody();
             }
             return HttpRequest.BodyPublishers.ofByteArray(bytes);
         } catch (Exception e) {
+            log.error("读取请求体失败", e);
             return HttpRequest.BodyPublishers.noBody();
         }
     }
@@ -485,9 +506,9 @@ public class WireMockManager {
             return true;
         String name = headerName.toLowerCase();
         return name.equals("connection") ||
-                name.equals("content-length") ||
-                name.equals("expect") ||
-                name.equals("host") ||
-                name.equals("upgrade");
+               name.equals("content-length") ||
+               name.equals("expect") ||
+               name.equals("host") ||
+               name.equals("upgrade");
     }
 }
