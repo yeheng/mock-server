@@ -27,6 +27,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -215,6 +216,10 @@ public class WireMockManager {
     public void reset() {
         stubs.clear();
         requestLogs.clear();
+        // 清理内部WireMockServer的所有stub
+        if (wireMockServer != null && wireMockServer.isRunning()) {
+            wireMockServer.resetAll();
+        }
         log.info("WireMock服务器已重置");
     }
 
@@ -348,7 +353,7 @@ public class WireMockManager {
             case REGEX -> WireMock.urlMatching(url);
             case PATH_TEMPLATE -> {
                 String regex = url.replaceAll("\\{[^}]+}", "[^/]+");
-                log.info("路径模板转换: {} -> 正则: {}", url, regex);
+                log.debug("路径模板转换: {} -> 正则: {}", url, regex);
                 yield WireMock.urlPathMatching("^" + regex + "$");
             }
         };
@@ -368,8 +373,9 @@ public class WireMockManager {
         if (headersPattern != null && !headersPattern.trim().isEmpty()) {
             try {
                 JsonNode headerPatterns = objectMapper.readTree(headersPattern);
-                Set<Map.Entry<String, JsonNode>> fields = headerPatterns.properties();
-                for (Map.Entry<String, JsonNode> entry : fields) {
+                Iterator<Map.Entry<String, JsonNode>> fields = headerPatterns.fields();
+                while (fields.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = fields.next();
                     String name = entry.getKey();
                     JsonNode rule = entry.getValue();
                     if (rule.has("equalTo")) {
@@ -390,8 +396,9 @@ public class WireMockManager {
         if (queryParamsPattern != null && !queryParamsPattern.trim().isEmpty()) {
             try {
                 JsonNode paramPatterns = objectMapper.readTree(queryParamsPattern);
-                Set<Map.Entry<String, JsonNode>> fields = paramPatterns.properties();
-                for (Map.Entry<String, JsonNode> entry : fields) {
+                Iterator<Map.Entry<String, JsonNode>> fields = paramPatterns.fields();
+                while (fields.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = fields.next();
                     String name = entry.getKey();
                     JsonNode rule = entry.getValue();
                     if (rule.has("equalTo")) {
@@ -427,7 +434,7 @@ public class WireMockManager {
                 } else if (bodyRule.has("matches")) {
                     String regex = bodyRule.get("matches").asText();
                     builder = builder.withRequestBody(WireMock.matching(regex));
-                    log.info("添加请求体正则匹配: regex={}", regex);
+                    log.debug("添加请求体正则匹配: regex={}", regex);
                 }
             } catch (com.fasterxml.jackson.core.JsonParseException e) {
                 // JSON解析失败，尝试修复常见的转义问题后重试
@@ -438,7 +445,7 @@ public class WireMockManager {
                     if (bodyRule.has("matches")) {
                         String regex = bodyRule.get("matches").asText();
                         builder = builder.withRequestBody(WireMock.matching(regex));
-                        log.info("添加请求体正则匹配（修复转义后）: regex={}", regex);
+                        log.debug("添加请求体正则匹配（修复转义后）: regex={}", regex);
                     } else if (bodyRule.has("contains")) {
                         builder = builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
                     }
@@ -479,15 +486,11 @@ public class WireMockManager {
         try {
             String method = request.getMethod().toUpperCase();
             if (method.equals("GET") || method.equals("DELETE") || method.equals("HEAD") || method.equals("OPTIONS")) {
-                log.debug("{} 请求，无请求体", method);
                 return HttpRequest.BodyPublishers.noBody();
             }
             var is = request.getInputStream();
             byte[] bytes = is != null ? is.readAllBytes() : new byte[0];
-            log.info("读取请求体: {} 字节, method={}, content={}", bytes.length, method,
-                    bytes.length > 0 ? new String(bytes) : "empty");
             if (bytes.length == 0) {
-                log.warn("POST/PUT/PATCH 请求但请求体为空");
                 return HttpRequest.BodyPublishers.noBody();
             }
             return HttpRequest.BodyPublishers.ofByteArray(bytes);

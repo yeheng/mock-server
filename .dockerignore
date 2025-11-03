@@ -1,0 +1,73 @@
+# Docker 构建忽略文件
+# 此文件列出了在 Docker 构建时应该忽略的文件和目录
+
+# 版本控制系统
+.git
+.gitignore
+.gitattributes
+
+# IDE 和编辑器文件
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 构建输出
+target/
+!target/wiremock-ui-*.jar
+
+# 日志文件
+logs/
+*.log
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# 测试报告和覆盖率
+surefire-reports/
+jacoco/
+pmd.xml
+spotbugsXml.xml
+checkstyle-result.xml
+
+# 临时文件
+*.tmp
+*.bak
+*.temp
+.Temp
+
+# 文档
+README.md
+docs/
+*.md
+
+# CI/CD 配置
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# 其他工具配置
+checkstyle*.xml
+spotbugs.xml
+pmd-ruleset.xml
+dependency-check-suppressions.xml
+
+# 环境配置文件
+.env
+.env.*
+application-*.properties
+application-*.yml
+
+# 备份文件
+*.backup
+*.bak
+*.old
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
