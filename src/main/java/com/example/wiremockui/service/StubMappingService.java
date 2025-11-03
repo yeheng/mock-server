@@ -87,6 +87,7 @@ public class StubMappingService {
 
     /**
      * 更新 StubMapping
+     * 使用增量更新，避免全量重载
      */
     @Transactional
     public StubMapping updateStub(@NonNull Long id, @NonNull StubMapping updatedStub) {
@@ -108,8 +109,11 @@ public class StubMappingService {
 
         StubMapping savedStub = stubMappingRepository.save(updatedStub);
 
-        // 重新添加到WireMock
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        // 使用增量更新：先删除旧的，再添加新的
+        wireMockManager.removeStubMapping(existingStub);
+        if (savedStub.getEnabled()) {
+            wireMockManager.addStubMapping(savedStub);
+        }
 
         log.info("Stub 更新成功: ID={}", savedStub.getId());
 
@@ -135,6 +139,7 @@ public class StubMappingService {
 
     /**
      * 启用/禁用 Stub
+     * 使用增量更新，避免全量重载
      */
     @Transactional
     public StubMapping toggleStubEnabled(@NonNull Long id) {
@@ -143,11 +148,18 @@ public class StubMappingService {
         StubMapping stub = stubMappingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Stub 不存在: ID=" + id));
 
+        boolean wasEnabled = stub.getEnabled();
         stub.setEnabled(!stub.getEnabled());
         StubMapping savedStub = stubMappingRepository.save(stub);
 
-        // 重新加载所有stubs到WireMock
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        // 使用增量更新
+        if (wasEnabled) {
+            // 从启用变为禁用：删除
+            wireMockManager.removeStubMapping(stub);
+        } else {
+            // 从禁用变为启用：添加
+            wireMockManager.addStubMapping(savedStub);
+        }
 
         log.info("Stub 状态切换成功: ID={}, enabled={}", id, savedStub.getEnabled());
 

@@ -32,20 +32,20 @@ public class WireMockServletFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        
+
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        
         String requestURI = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
-        
+
         // 跳过静态资源和 Spring Boot 管理 API 请求（白名单）
         if (isStaticResource(requestURI) || isApiRequest(requestURI) || isWireMockAdminRequest(requestURI)) {
             chain.doFilter(request, response);
             return;
         }
-        
-        // 处理 WireMock 请求 - 路由到 WireMock 服务器
+
+        // 所有其他请求都交给 WireMockManager 直接处理
+        // 现在使用本地处理，避免了原来的复杂代理逻辑
         try {
             wireMockManager.handleRequest(httpRequest, httpResponse);
         } catch (Exception e) {

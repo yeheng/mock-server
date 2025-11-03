@@ -271,7 +271,6 @@ class StubMappingServiceTest {
         when(stubMappingRepository.findById(1L)).thenReturn(Optional.of(testStub));
         when(stubMappingRepository.save(any(StubMapping.class))).thenReturn(updatedStub);
         when(wireMockManager.isRunning()).thenReturn(true);
-        when(stubMappingRepository.findAll()).thenReturn(Arrays.asList(updatedStub));
 
         // 执行
         StubMapping result = stubMappingService.updateStub(1L, updatedStub);
@@ -281,7 +280,10 @@ class StubMappingServiceTest {
         assertEquals("更新后的接口", result.getName());
         verify(stubMappingRepository).findById(1L);
         verify(stubMappingRepository).save(updatedStub);
-        verify(wireMockManager).reloadAllStubs(anyList());
+        verify(wireMockManager).isRunning();
+        // 现在使用增量更新：先删除旧的，再添加新的
+        verify(wireMockManager).removeStubMapping(testStub);
+        verify(wireMockManager).addStubMapping(result);
     }
 
     @Test
@@ -338,7 +340,6 @@ class StubMappingServiceTest {
         testStub.setEnabled(true);
         when(stubMappingRepository.findById(1L)).thenReturn(Optional.of(testStub));
         when(stubMappingRepository.save(any(StubMapping.class))).thenReturn(testStub);
-        when(stubMappingRepository.findAll()).thenReturn(Arrays.asList(testStub));
 
         // 执行
         StubMapping result = stubMappingService.toggleStubEnabled(1L);
@@ -348,7 +349,8 @@ class StubMappingServiceTest {
         assertFalse(result.getEnabled());
         verify(stubMappingRepository).findById(1L);
         verify(stubMappingRepository).save(testStub);
-        verify(wireMockManager).reloadAllStubs(anyList());
+        // 现在使用增量更新：禁用时删除 stub
+        verify(wireMockManager).removeStubMapping(testStub);
     }
 
     @Test
@@ -358,7 +360,6 @@ class StubMappingServiceTest {
         disabledStub.setEnabled(false);
         when(stubMappingRepository.findById(2L)).thenReturn(Optional.of(disabledStub));
         when(stubMappingRepository.save(any(StubMapping.class))).thenReturn(disabledStub);
-        when(stubMappingRepository.findAll()).thenReturn(Arrays.asList(disabledStub));
 
         // 执行
         StubMapping result = stubMappingService.toggleStubEnabled(2L);
@@ -368,7 +369,8 @@ class StubMappingServiceTest {
         assertTrue(result.getEnabled());
         verify(stubMappingRepository).findById(2L);
         verify(stubMappingRepository).save(disabledStub);
-        verify(wireMockManager).reloadAllStubs(anyList());
+        // 现在使用增量更新：启用时添加 stub
+        verify(wireMockManager).addStubMapping(result);
     }
 
     @Test
