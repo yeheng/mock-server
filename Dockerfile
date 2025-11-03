@@ -17,7 +17,7 @@ WORKDIR /app
 
 # 复制 JAR 文件
 # 我们使用通配符来匹配 JAR 文件名
-COPY target/wiremock-ui-*.jar app.jar
+COPY target/wiremock-*.jar app.jar
 
 # 创建日志目录
 RUN mkdir -p /app/logs && \
