@@ -39,7 +39,7 @@ public class WireMockServletFilter implements Filter {
         String method = httpRequest.getMethod();
 
         // 仅将 /api/** 代理给 WireMock，其余请求交由 Spring 处理（包括静态资源与管理接口）
-        if (isWireMockApi(requestURI)) {
+        if (isWireMockApi(requestURI) || isWireMockAdminRequest(requestURI)) {
             try {
                 wireMockManager.handleRequest(httpRequest, httpResponse);
             } catch (Exception e) {

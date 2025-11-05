@@ -133,8 +133,13 @@ public class WireMockManager {
             // 1. 将 Undertow 请求转换为 WireMock 的 Request 对象
             Request wiremockRequest = toWireMockRequest(servletRequest);
 
-            // 2. 【核心】在这里，我们调用的是 DirectCallHttpServer 上的 stubRequest 方法！
-            Response wiremockResponse = directCallServer.stubRequest(wiremockRequest);
+            // 2. 【核心】根据请求类型，决定调用 stubRequest 还是 adminRequest
+            Response wiremockResponse;
+            if (wiremockRequest.getUrl().startsWith("/__admin")) {
+                wiremockResponse = directCallServer.adminRequest(wiremockRequest);
+            } else {
+                wiremockResponse = directCallServer.stubRequest(wiremockRequest);
+            }
 
             // 3. 将 WireMock 的 Response 对象转换并写回 Undertow 的 exchange
             fromWireMockResponse(wiremockResponse, servletResponse);

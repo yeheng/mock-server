@@ -1,37 +1,23 @@
 <script setup>
-import { ref } from 'vue'
-import { useCounterStore } from './stores/counter'
-import { Button } from '@/components/ui/button'
+import { onMounted } from 'vue'
+import StubList from '@/components/StubList.vue'
+import { useStubsStore } from '@/stores/stubs'
 
-const counter = useCounterStore()
-const message = ref('WireMock UI Manager')
+const stubs = useStubsStore()
+
+onMounted(() => {
+  stubs.fetchAll()
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">
-        {{ message }}
-      </h1>
-      
-      <div class="text-center space-y-4">
-        <p class="text-gray-600">
-          计数器: <span class="font-semibold text-blue-600">{{ counter.count }}</span>
-        </p>
-        
-        <div class="space-x-2">
-          <Button variant="default" @click="counter.increment">
-            增加
-          </Button>
-          <Button variant="destructive" @click="counter.decrement">
-            减少
-          </Button>
-        </div>
-        
-        <p class="text-sm text-gray-500 mt-4">
-          使用 Vite + Vue + Tailwind + Pinia + shadcn-vue
-        </p>
-      </div>
-    </div>
+  <div class="container mx-auto p-4">
+    <header class="flex justify-between items-center py-4">
+      <h1 class="text-2xl font-bold">WireMock UI</h1>
+    </header>
+
+    <main>
+      <StubList />
+    </main>
   </div>
 </template>
