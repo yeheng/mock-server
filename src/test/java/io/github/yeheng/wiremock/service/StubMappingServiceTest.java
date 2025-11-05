@@ -462,4 +462,83 @@ class StubMappingServiceTest {
         assertEquals(7, stats.enabledStubs());
         assertEquals(3, stats.disabledStubs());
     }
+
+    @Test
+    @DisplayName("测试 createStub - 仓库保存失败导致回滚，WireMock不更新")
+    void testCreateStub_RepositorySaveFailure_Rollback_NoWireMockUpdate() {
+        // 准备
+        when(wireMockManager.isRunning()).thenReturn(true);
+        when(stubMappingRepository.save(any(StubMapping.class))).thenThrow(new RuntimeException("数据库保存失败"));
+
+        // 执行 & 验证
+        assertThrows(RuntimeException.class, () -> {
+            stubMappingService.createStub(testStub);
+        });
+
+        // 仓库保存被调用，但 WireMock 不应更新
+        verify(stubMappingRepository).save(testStub);
+        verify(wireMockManager, never()).addStubMapping(any());
+    }
+
+    @Test
+    @DisplayName("测试 updateStub - 仓库保存失败导致回滚，WireMock不删除/不添加")
+    void testUpdateStub_RepositorySaveFailure_Rollback_NoWireMockUpdate() {
+        // 准备
+        when(wireMockManager.isRunning()).thenReturn(true);
+        // 现有 stub
+        StubMapping existing = new StubMapping();
+        existing.setId(1L);
+        existing.setName("现有Stub");
+        existing.setMethod("GET");
+        existing.setUrl("/api/existing");
+        existing.setEnabled(true);
+        existing.setResponseDefinition("{\"status\": \"ok\"}");
+        existing.setUuid("uuid-existing");
+
+        when(stubMappingRepository.findById(1L)).thenReturn(java.util.Optional.of(existing));
+        // 保存失败
+        when(stubMappingRepository.save(any(StubMapping.class))).thenThrow(new RuntimeException("数据库保存失败"));
+
+        // 待更新的 stub
+        StubMapping updated = new StubMapping();
+        updated.setName("更新后的Stub");
+        updated.setMethod("GET");
+        updated.setUrl("/api/existing");
+        updated.setEnabled(true);
+        updated.setResponseDefinition("{\"status\": \"updated\"}");
+
+        // 执行 & 验证
+        assertThrows(RuntimeException.class, () -> {
+            stubMappingService.updateStub(1L, updated);
+        });
+
+        // 验证 WireMock 未被触碰
+        verify(wireMockManager, never()).removeStubMapping(any());
+        verify(wireMockManager, never()).addStubMapping(any());
+    }
+
+    @Test
+    @DisplayName("测试 toggleStubEnabled - 仓库保存失败导致回滚，WireMock不删除/不添加")
+    void testToggleStubEnabled_RepositorySaveFailure_Rollback_NoWireMockUpdate() {
+        // 准备
+        StubMapping existing = new StubMapping();
+        existing.setId(3L);
+        existing.setName("待切换Stub");
+        existing.setMethod("GET");
+        existing.setUrl("/api/toggle");
+        existing.setEnabled(true);
+        existing.setResponseDefinition("{\"status\": \"ok\"}");
+        existing.setUuid("uuid-toggle");
+
+        when(stubMappingRepository.findById(3L)).thenReturn(java.util.Optional.of(existing));
+        when(stubMappingRepository.save(any(StubMapping.class))).thenThrow(new RuntimeException("数据库保存失败"));
+
+        // 执行 & 验证
+        assertThrows(RuntimeException.class, () -> {
+            stubMappingService.toggleStubEnabled(3L);
+        });
+
+        verify(wireMockManager, never()).removeStubMapping(any());
+        verify(wireMockManager, never()).addStubMapping(any());
+    }
 }

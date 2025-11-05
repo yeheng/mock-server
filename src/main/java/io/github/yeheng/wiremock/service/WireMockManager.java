@@ -476,6 +476,16 @@ public class WireMockManager {
         MappingBuilder builder = WireMock.request(method.getName(), urlPattern)
                 .atPriority(stub.getPriority() != null ? stub.getPriority() : 0);
 
+        // 将实体中的 UUID 作为 WireMock 映射 ID，保证删除/禁用时可精确移除
+        String uuid = stub.getUuid();
+        if (uuid != null && !uuid.trim().isEmpty()) {
+            try {
+                builder = builder.withId(java.util.UUID.fromString(uuid));
+            } catch (IllegalArgumentException ignore) {
+                // 如果 UUID 非法，跳过设置ID，后续删除逻辑会走全量重载兜底
+            }
+        }
+
         // Headers
         String headersPattern = stub.getRequestHeadersPattern();
         if (headersPattern != null && !headersPattern.trim().isEmpty()) {

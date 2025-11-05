@@ -2,6 +2,7 @@ package io.github.yeheng.wiremock.integration;
 
 import io.github.yeheng.wiremock.WiremockUiApplication;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,6 +50,16 @@ class AdminApiE2ETest {
     private int port;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    @BeforeEach
+    void resetWireMock() throws Exception {
+        // 在每个测试前重置 WireMock 状态，确保测试隔离
+        HttpRequest resetRequest = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/wiremock/reset"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        httpClient.send(resetRequest, HttpResponse.BodyHandlers.ofString());
+    }
 
     @AfterEach
     void cleanup() throws Exception {
@@ -338,6 +349,8 @@ class AdminApiE2ETest {
         assertEquals(204, deleteResponse.statusCode(), "删除应该返回 204 No Content");
 
         // 步骤4: 验证 WireMock 返回 404
+        // 避免偶发的异步重载时序问题，稍作等待
+        Thread.sleep(200);
         HttpResponse<String> afterDelete = httpClient.send(
             HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/temp/123"))
@@ -347,6 +360,178 @@ class AdminApiE2ETest {
         );
         assertEquals(404, afterDelete.statusCode(),
             "删除 stub 后，WireMock 应该返回 404");
+    }
+
+    @Test
+    @DisplayName("TDD场景7: Admin API 对无效响应定义返回 400")
+    void testAdminApiReturns400OnInvalidResponseDefinition() throws Exception {
+        Thread.sleep(2000);
+
+        String invalidStubJson = """
+                {
+                    "name": "无效响应定义",
+                    "method": "GET",
+                    "url": "/api/bad/respdef",
+                    "enabled": true,
+                    "responseDefinition": "not a json"
+                }
+                """;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/stubs"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(invalidStubJson))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode(), "无效的 responseDefinition 应返回 400 Bad Request");
+    }
+
+    @Test
+    @DisplayName("TDD场景8: Toggle 全生命周期：创建→禁用→404→启用→匹配")
+    void testToggleLifecycle_E2E() throws Exception {
+        Thread.sleep(2000);
+
+        // 创建启用的 stub
+        String createStubJson = """
+                {
+                    "name": "Toggle生命周期接口",
+                    "method": "GET",
+                    "url": "/api/toggle/1",
+                    "enabled": true,
+                    "responseDefinition": "{\\"message\\": \\\"enabled\\\"}"
+                }
+                """;
+
+        HttpResponse<String> createResponse = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/stubs"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(createStubJson))
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(201, createResponse.statusCode());
+        Long stubId = extractIdFromJson(createResponse.body());
+        assertNotNull(stubId);
+
+        // 验证启用时匹配
+        HttpResponse<String> enabledResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/toggle/1"))
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, enabledResp.statusCode());
+
+        // 调用 toggle 禁用
+        HttpResponse<String> toggleOffResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/stubs/" + stubId + "/toggle"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, toggleOffResp.statusCode());
+
+        // 验证禁用后返回 404
+        Thread.sleep(200);
+        HttpResponse<String> disabledResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/toggle/1"))
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(404, disabledResp.statusCode());
+
+        // 再次 toggle 启用
+        HttpResponse<String> toggleOnResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/stubs/" + stubId + "/toggle"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, toggleOnResp.statusCode());
+
+        // 验证再次匹配
+        Thread.sleep(200);
+        HttpResponse<String> reenabledResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/toggle/1"))
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, reenabledResp.statusCode());
+        assertTrue(reenabledResp.body().contains("enabled"));
+    }
+
+    @Test
+    @DisplayName("TDD场景9: 复杂组合匹配（Headers + Query + Body）成功与失败")
+    void testComplexCombinationMatching_E2E() throws Exception {
+        Thread.sleep(2000);
+
+        // 创建复杂组合匹配的 stub
+        String complexStubJson = """
+                {
+                    "name": "复杂组合接口",
+                    "method": "POST",
+                    "url": "/api/complex",
+                    "enabled": true,
+                    "requestHeadersPattern": "{\\"Authorization\\": {\\"matches\\": \\\"Bearer .+\\\"}, \\"User-Agent\\": {\\"contains\\": \\\"E2ETest\\\"}, \\"X-Request-ID\\": {\\"matches\\": \\\"^[A-Z0-9-]{8,}$\\\"}}",
+                    "queryParametersPattern": "{\\"page\\": {\\"equalTo\\": \\\"1\\\"}, \\"tags\\": {\\"contains\\": \\\"vip\\\"}, \\"id\\": {\\"matches\\": \\\"^[0-9]{3}$\\\"}}",
+                    "requestBodyPattern": "{\\"matchesJsonPath\\": \\\"$.user.id\\\"}",
+                    "responseDefinition": "{\\"ok\\": true, \\"message\\": \\\"复杂匹配成功\\\"}"
+                }
+                """;
+
+        HttpResponse<String> createResponse = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/admin/stubs"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(complexStubJson))
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(201, createResponse.statusCode());
+
+        // 成功匹配请求
+        String body = """
+                {
+                  "user": {"id": 999, "name": "foo"},
+                  "meta": {"ok": true}
+                }
+                """;
+        HttpResponse<String> successResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/complex?page=1&tags=vip&id=123"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer token123")
+                .header("User-Agent", "E2ETest/1.0")
+                .header("X-Request-ID", "ABC-12345")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(200, successResp.statusCode());
+        assertTrue(successResp.body().contains("复杂匹配成功"));
+
+        // 失败匹配请求（缺少必要Header）
+        HttpResponse<String> failResp = httpClient.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + "/api/complex?page=1&tags=vip&id=123"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer token123")
+                .header("User-Agent", "E2ETest/1.0")
+                // 缺少 X-Request-ID
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        assertEquals(404, failResp.statusCode(), "缺少匹配Header时应该返回404");
     }
 
     /**

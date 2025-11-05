@@ -152,6 +152,16 @@ public class StubCrudService {
         MappingBuilder builder = WireMock.request(method.getName(), urlPattern)
                 .atPriority(stub.getPriority() != null ? stub.getPriority() : 0);
 
+        // 使用实体 UUID 作为 WireMock 映射 ID，确保删除/禁用时精确移除
+        String uuid = stub.getUuid();
+        if (uuid != null && !uuid.trim().isEmpty()) {
+            try {
+                builder = builder.withId(java.util.UUID.fromString(uuid));
+            } catch (IllegalArgumentException ignore) {
+                // 非法 UUID 跳过设置，删除逻辑有兜底重载
+            }
+        }
+
         // Headers
         String headersPattern = stub.getRequestHeadersPattern();
         if (headersPattern != null && !headersPattern.trim().isEmpty()) {
