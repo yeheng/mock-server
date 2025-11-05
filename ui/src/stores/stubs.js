@@ -1,66 +1,45 @@
 import { defineStore } from 'pinia'
+import { ref } from 'vue'
 
-// 简单的 WireMock Stub 数据模型（JSDoc用于开发提示）
-/**
- * @typedef {Object} StubRequest
- * @property {string} method
- * @property {string} url
- * @property {{[key:string]: string}} [headers]
- * @property {string} [body]
- */
+export const useStubsStore = defineStore('stubs', () => {
+  const stubs = ref([])
 
-/**
- * @typedef {Object} StubResponse
- * @property {number} status
- * @property {string} [body]
- * @property {{[key:string]: string}} [headers]
- */
+  const fetchStubs = async () => {
+    try {
+      const response = await fetch('/__admin/mappings')
+      const data = await response.json()
+      stubs.value = data.mappings
+    } catch (error) {
+      console.error('Error fetching stubs:', error)
+    }
+  }
 
-/**
- * @typedef {Object} Stub
- * @property {string} id
- * @property {StubRequest} request
- * @property {StubResponse} response
- * @property {string[]} [tags]
- * @property {boolean} enabled
- */
+  const toggleStub = async (id) => {
+    const stub = stubs.value.find(s => s.id === id)
+    if (!stub) return
 
-export const useStubsStore = defineStore('stubs', {
-  state: () => ({
-    /** @type {Stub[]} */
-    items: [],
-  }),
+    const newEnabledState = !stub.enabled
 
-  getters: {
-    enabledStubs: state => state.items.filter(i => i.enabled),
-    disabledStubs: state => state.items.filter(i => !i.enabled),
-  },
+    try {
+      await fetch(`/__admin/mappings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...stub, enabled: newEnabledState }),
+      })
+      stub.enabled = newEnabledState
+    } catch (error) {
+      console.error(`Error toggling stub ${id}:`, error)
+    }
+  }
 
-  actions: {
-    async fetchAll() {
-      try {
-        const response = await fetch('/__admin/mappings');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        this.items = data.mappings;
-      } catch (error) {
-        console.error("Could not fetch stubs:", error);
-        // In a real app, you'd want to show a notification to the user
-        this.items = [];
-      }
-    },
+  const removeStub = async (id) => {
+    try {
+      await fetch(`/__admin/mappings/${id}`, { method: 'DELETE' })
+      stubs.value = stubs.value.filter(s => s.id !== id)
+    } catch (error) {
+      console.error(`Error removing stub ${id}:`, error)
+    }
+  }
 
-    toggle(id) {
-      const stub = this.items.find(i => i.id === id)
-      if (stub) {
-        stub.enabled = !stub.enabled
-      }
-    },
-
-    remove(id) {
-      this.items = this.items.filter(i => i.id !== id)
-    },
-  },
+  return { stubs, fetchStubs, toggleStub, removeStub }
 })
