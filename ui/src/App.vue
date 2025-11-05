@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useCounterStore } from './stores/counter'
+import { Button } from '@/components/ui/button'
 
 const counter = useCounterStore()
 const message = ref('WireMock UI Manager')
@@ -19,18 +20,12 @@ const message = ref('WireMock UI Manager')
         </p>
         
         <div class="space-x-2">
-          <button 
-            @click="counter.increment"
-            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
+          <Button variant="default" @click="counter.increment">
             增加
-          </button>
-          <button 
-            @click="counter.decrement"
-            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
+          </Button>
+          <Button variant="destructive" @click="counter.decrement">
             减少
-          </button>
+          </Button>
         </div>
         
         <p class="text-sm text-gray-500 mt-4">

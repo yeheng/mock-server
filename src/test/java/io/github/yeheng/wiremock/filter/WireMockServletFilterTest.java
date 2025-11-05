@@ -57,8 +57,7 @@ class WireMockServletFilterTest {
     @BeforeEach
     void setUp() throws IOException {
         filter = new WireMockServletFilter(wireMockManager);
-        when(response.getOutputStream()).thenReturn(outputStream);
-        when(response.getWriter()).thenReturn(printWriter);
+        // 只在异常处理测试中才 mock writer，避免 Mockito UnnecessaryStubbing 警告
     }
 
     // ==================== 第一部分：管理API路由测试 ====================
@@ -458,7 +457,8 @@ class WireMockServletFilterTest {
     @Test
     @DisplayName("异常处理 - WireMockManager 抛出异常应该返回500")
     void testErrorHandling_WireMockManagerThrowsException() throws ServletException, IOException {
-        // 准备
+        // 准备：在这个测试中才 mock writer
+        when(response.getWriter()).thenReturn(printWriter);
         when(request.getRequestURI()).thenReturn("/api/test");
         when(request.getMethod()).thenReturn("GET");
         doThrow(new IOException("模拟异常")).when(wireMockManager).handleRequest(any(), any());
