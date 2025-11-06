@@ -9,7 +9,7 @@ LABEL description="WireMock UI Manager - Spring Boot Application (Builder Stage)
 LABEL version="1.0.0"
 
 # 安装必要的构建工具
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl maven
 
 # 设置工作目录
 WORKDIR /build
