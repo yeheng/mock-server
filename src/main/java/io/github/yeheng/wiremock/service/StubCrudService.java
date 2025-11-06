@@ -1,5 +1,13 @@
 package io.github.yeheng.wiremock.service;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -8,13 +16,9 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
+
 import io.github.yeheng.wiremock.entity.StubMapping;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 负责 StubMapping 的 CRUD 与 WireMock 注册/删除
@@ -36,7 +40,7 @@ public class StubCrudService {
         return new ArrayList<>(stubs.values());
     }
 
-    public void addStubMapping(@NonNull StubMapping stubMapping, WireMockServer wireMockServer) {
+    public void addStubMapping(StubMapping stubMapping, WireMockServer wireMockServer) {
         if (stubMapping.getEnabled() == null || !stubMapping.getEnabled()) {
             log.debug("Stub 已禁用，跳过: {}", stubMapping.getName());
             return;
@@ -56,7 +60,7 @@ public class StubCrudService {
                 stubMapping.getName(), stubMapping.getMethod(), stubMapping.getUrl(), stubKey);
     }
 
-    public void removeStubMapping(@NonNull StubMapping stubMapping, WireMockServer wireMockServer) {
+    public void removeStubMapping(StubMapping stubMapping, WireMockServer wireMockServer) {
         String stubKey = stubMapping.getUuid();
         if (stubKey == null || stubKey.trim().isEmpty()) {
             stubKey = generateStubKey(stubMapping);
@@ -106,7 +110,7 @@ public class StubCrudService {
         }
     }
 
-    public void reloadAllStubs(@NonNull List<StubMapping> newStubs, WireMockServer wireMockServer) {
+    public void reloadAllStubs(List<StubMapping> newStubs, WireMockServer wireMockServer) {
         stubs.clear();
         wireMockServer.resetMappings();
 
@@ -117,7 +121,7 @@ public class StubCrudService {
         log.info("已重新加载所有Stub Mappings，数量: {}", stubs.size());
     }
 
-    private String generateStubKey(@NonNull StubMapping stubMapping) {
+    private String generateStubKey(StubMapping stubMapping) {
         if (stubMapping.getUuid() != null && !stubMapping.getUuid().trim().isEmpty()) {
             return stubMapping.getUuid();
         }
@@ -128,7 +132,7 @@ public class StubCrudService {
     }
 
     // 将实体 StubMapping 转换为 WireMock 的 MappingBuilder
-    private MappingBuilder toWireMockMapping(@NonNull StubMapping stub) {
+    private MappingBuilder toWireMockMapping(StubMapping stub) {
         UrlPattern urlPattern;
         String url = stub.getUrl();
         urlPattern = switch (stub.getUrlMatchType()) {
@@ -264,7 +268,7 @@ public class StubCrudService {
         return builder;
     }
 
-    private String createDefaultResponse(@NonNull StubMapping stub) {
+    private String createDefaultResponse(StubMapping stub) {
         return String.format(
                 "{\"message\": \"Mocked response for %s\", \"stubName\": \"%s\", \"timestamp\": \"%s\"}",
                 stub.getName(),

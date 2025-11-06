@@ -1,20 +1,21 @@
 package io.github.yeheng.wiremock.service;
 
-import com.github.tomakehurst.wiremock.http.RequestMethod;
-import io.github.yeheng.wiremock.entity.StubMapping;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.springframework.stereotype.Component;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
+
+import io.github.yeheng.wiremock.entity.StubMapping;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
-
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * StubMapping 到 WireMock MappingBuilder 的转换器
@@ -30,7 +31,7 @@ public class StubMappingConverter {
     /**
      * 将 StubMapping 转换为 WireMock 的 MappingBuilder
      */
-    public MappingBuilder convert(@NonNull StubMapping stub) {
+    public MappingBuilder convert(StubMapping stub) {
         // 1. 构建基础请求匹配（URL + 方法 + 优先级）
         MappingBuilder builder = buildBaseRequest(stub);
 
@@ -55,7 +56,7 @@ public class StubMappingConverter {
     /**
      * 构建基础请求匹配（URL + 方法 + 优先级）
      */
-    private MappingBuilder buildBaseRequest(@NonNull StubMapping stub) {
+    private MappingBuilder buildBaseRequest(StubMapping stub) {
         UrlPattern urlPattern = buildUrlPattern(stub);
         RequestMethod method = buildRequestMethod(stub);
         int priority = stub.getPriority() != null ? stub.getPriority() : 0;
@@ -67,7 +68,7 @@ public class StubMappingConverter {
      * 构建 URL 匹配模式
      * 使用 RegexCache 缓存正则表达式编译结果，提升性能
      */
-    private UrlPattern buildUrlPattern(@NonNull StubMapping stub) {
+    private UrlPattern buildUrlPattern(StubMapping stub) {
         String url = stub.getUrl();
         return switch (stub.getUrlMatchType()) {
             case EQUALS -> WireMock.urlPathEqualTo(url);  // 使用 urlPathEqualTo 仅匹配路径部分，不包括查询字符串
@@ -88,7 +89,7 @@ public class StubMappingConverter {
     /**
      * 构建请求方法
      */
-    private RequestMethod buildRequestMethod(@NonNull StubMapping stub) {
+    private RequestMethod buildRequestMethod(StubMapping stub) {
         try {
             String methodStr = stub.getMethod() != null ? stub.getMethod().toUpperCase() : "ANY";
             return RequestMethod.fromString(methodStr);
@@ -102,7 +103,7 @@ public class StubMappingConverter {
      * 设置 UUID 到 MappingBuilder
      * 用于保证删除/禁用时可精确移除
      */
-    private MappingBuilder setUuid(MappingBuilder builder, @NonNull StubMapping stub) {
+    private MappingBuilder setUuid(MappingBuilder builder, StubMapping stub) {
         String uuid = stub.getUuid();
         if (uuid != null && !uuid.trim().isEmpty()) {
             try {
@@ -118,7 +119,7 @@ public class StubMappingConverter {
     /**
      * 添加请求头匹配规则
      */
-    private MappingBuilder addHeaderMatching(MappingBuilder builder, @NonNull StubMapping stub) {
+    private MappingBuilder addHeaderMatching(MappingBuilder builder, StubMapping stub) {
         String headersPattern = stub.getRequestHeadersPattern();
         if (headersPattern == null || headersPattern.trim().isEmpty()) {
             return builder;
@@ -152,7 +153,7 @@ public class StubMappingConverter {
     /**
      * 添加查询参数匹配规则
      */
-    private MappingBuilder addQueryParamMatching(MappingBuilder builder, @NonNull StubMapping stub) {
+    private MappingBuilder addQueryParamMatching(MappingBuilder builder, StubMapping stub) {
         String queryParamsPattern = stub.getQueryParametersPattern();
         if (queryParamsPattern == null || queryParamsPattern.trim().isEmpty()) {
             return builder;
@@ -185,7 +186,7 @@ public class StubMappingConverter {
      * 添加请求体匹配规则
      * 包含多种匹配策略和错误恢复机制
      */
-    private MappingBuilder addBodyMatching(MappingBuilder builder, @NonNull StubMapping stub) {
+    private MappingBuilder addBodyMatching(MappingBuilder builder, StubMapping stub) {
         String bodyPattern = stub.getRequestBodyPattern();
         if (bodyPattern == null || bodyPattern.trim().isEmpty()) {
             return builder;
@@ -240,7 +241,7 @@ public class StubMappingConverter {
     /**
      * 设置响应定义
      */
-    private MappingBuilder setResponse(MappingBuilder builder, @NonNull StubMapping stub) {
+    private MappingBuilder setResponse(MappingBuilder builder, StubMapping stub) {
         String responseBody = stub.getResponseDefinition();
         if (responseBody == null || responseBody.trim().isEmpty()) {
             responseBody = createDefaultResponse(stub);
@@ -256,7 +257,7 @@ public class StubMappingConverter {
     /**
      * 创建默认响应
      */
-    private String createDefaultResponse(@NonNull StubMapping stub) {
+    private String createDefaultResponse(StubMapping stub) {
         return String.format(
                 "{\"message\": \"Mocked response for %s\", \"stubName\": \"%s\", \"timestamp\": \"%s\"}",
                 stub.getName(),

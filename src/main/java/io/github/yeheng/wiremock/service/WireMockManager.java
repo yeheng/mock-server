@@ -1,32 +1,32 @@
 package io.github.yeheng.wiremock.service;
 
-import io.github.yeheng.wiremock.entity.StubMapping;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.direct.DirectCallHttpServer;
 import com.github.tomakehurst.wiremock.direct.DirectCallHttpServerFactory;
-import com.github.tomakehurst.wiremock.http.*;
+import com.github.tomakehurst.wiremock.http.Request;
+import com.github.tomakehurst.wiremock.http.Response;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+
+import io.github.yeheng.wiremock.entity.StubMapping;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 全局WireMock管理器
@@ -206,7 +206,7 @@ public class WireMockManager {
      * 添加Stub Mapping
      * 使用 ConcurrentHashMap 的 put 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList
      */
-    public void addStubMapping(@NonNull StubMapping stubMapping) {
+    public void addStubMapping(StubMapping stubMapping) {
         modifyLock.lock();
         try {
             if (!isRunning()) {
@@ -259,7 +259,7 @@ public class WireMockManager {
      * 生成 Stub 的唯一 key
      * 优先使用 UUID，其次使用 id
      */
-    private String generateStubKey(@NonNull StubMapping stubMapping) {
+    private String generateStubKey(StubMapping stubMapping) {
         if (stubMapping.getUuid() != null && !stubMapping.getUuid().trim().isEmpty()) {
             return stubMapping.getUuid();
         }
@@ -273,7 +273,7 @@ public class WireMockManager {
      * 删除Stub Mapping
      * 使用 ConcurrentHashMap 的 remove 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList 的 O(n) 操作
      */
-    public void removeStubMapping(@NonNull StubMapping stubMapping) {
+    public void removeStubMapping(StubMapping stubMapping) {
         modifyLock.lock();
         try {
             if (!isRunning()) {
@@ -351,7 +351,7 @@ public class WireMockManager {
      * 重新加载所有Stub Mappings
      * 清空所有旧的，然后重新添加启用的 stubs
      */
-    public void reloadAllStubs(@NonNull List<StubMapping> newStubs) {
+    public void reloadAllStubs(List<StubMapping> newStubs) {
         reloadLock.lock();
         try {
             if (!isRunning()) {

@@ -6,7 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.yeheng.wiremock.entity.StubMapping;
 import io.github.yeheng.wiremock.service.StubMappingService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +39,7 @@ public class StubMappingController {
      * 创建新的 Stub
      */
     @PostMapping
-    public ResponseEntity<StubMapping> createStub(@NonNull @Valid @RequestBody StubMapping stub) {
+    public ResponseEntity<StubMapping> createStub(@Valid @RequestBody StubMapping stub) {
         try {
             StubMapping createdStub = stubMappingService.createStub(stub);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdStub);
@@ -71,7 +69,7 @@ public class StubMappingController {
      * 分页获取所有 Stubs
      */
     @GetMapping("/page")
-    public ResponseEntity<Page<StubMapping>> getAllStubs(@NonNull Pageable pageable) {
+    public ResponseEntity<Page<StubMapping>> getAllStubs(Pageable pageable) {
         try {
             Page<StubMapping> stubs = stubMappingService.getAllStubs(pageable);
             return ResponseEntity.ok(stubs);
@@ -85,7 +83,7 @@ public class StubMappingController {
      * 搜索 Stubs
      */
     @GetMapping("/search")
-    public ResponseEntity<List<StubMapping>> searchStubs(@NonNull @RequestParam String keyword) {
+    public ResponseEntity<List<StubMapping>> searchStubs(@RequestParam String keyword) {
         try {
             List<StubMapping> stubs = stubMappingService.searchStubs(keyword);
             return ResponseEntity.ok(stubs);
@@ -99,7 +97,7 @@ public class StubMappingController {
      * 根据 ID 获取 Stub
      */
     @GetMapping("/{stubId}")
-    public ResponseEntity<StubMapping> getStubById(@NonNull @PathVariable Long stubId) {
+    public ResponseEntity<StubMapping> getStubById(@PathVariable Long stubId) {
         return stubMappingService.getStubById(stubId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -109,8 +107,8 @@ public class StubMappingController {
      * 更新 Stub
      */
     @PutMapping("/{stubId}")
-    public ResponseEntity<StubMapping> updateStub(@NonNull @PathVariable Long stubId,
-                                                  @NonNull @Valid @RequestBody StubMapping updatedStub) {
+    public ResponseEntity<StubMapping> updateStub(@PathVariable Long stubId,
+                                                  @Valid @RequestBody StubMapping updatedStub) {
         try {
             StubMapping stub = stubMappingService.updateStub(stubId, updatedStub);
             return ResponseEntity.ok(stub);
@@ -126,7 +124,7 @@ public class StubMappingController {
      * 删除 Stub
      */
     @DeleteMapping("/{stubId}")
-    public ResponseEntity<Void> deleteStub(@NonNull @PathVariable Long stubId) {
+    public ResponseEntity<Void> deleteStub(@PathVariable Long stubId) {
         try {
             stubMappingService.deleteStub(stubId);
             return ResponseEntity.noContent().build();
@@ -142,7 +140,7 @@ public class StubMappingController {
      * 启用/禁用 Stub
      */
     @PostMapping("/{stubId}/toggle")
-    public ResponseEntity<StubMapping> toggleStubEnabled(@NonNull @PathVariable Long stubId) {
+    public ResponseEntity<StubMapping> toggleStubEnabled(@PathVariable Long stubId) {
         try {
             StubMapping stub = stubMappingService.toggleStubEnabled(stubId);
             return ResponseEntity.ok(stub);

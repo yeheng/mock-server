@@ -1,18 +1,5 @@
 package io.github.yeheng.wiremock.benchmark;
 
-import io.github.yeheng.wiremock.WiremockUiApplication;
-import io.github.yeheng.wiremock.entity.StubMapping;
-import io.github.yeheng.wiremock.repository.StubMappingRepository;
-import io.github.yeheng.wiremock.service.WireMockManager;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.TestPropertySource;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -22,6 +9,20 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.TestPropertySource;
+
+import io.github.yeheng.wiremock.WiremockUiApplication;
+import io.github.yeheng.wiremock.entity.StubMapping;
+import io.github.yeheng.wiremock.repository.StubMappingRepository;
+import io.github.yeheng.wiremock.service.WireMockManager;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 综合性能基准测试
@@ -70,7 +71,8 @@ class ComprehensiveBenchmarkTest {
         // 创建单个stub
         StubMapping stub = createStub("test-1", "GET", "/api/test1");
         stubMappingRepository.save(stub);
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        List<StubMapping> allStubs = stubMappingRepository.findAll();
+        wireMockManager.reloadAllStubs(allStubs != null ? allStubs : new ArrayList<>());
 
         // 等待WireMock启动
         Thread.sleep(1000);
@@ -105,7 +107,8 @@ class ComprehensiveBenchmarkTest {
             stubs.add(createStub("test-" + i, "GET", "/api/test" + i));
         }
         stubMappingRepository.saveAll(stubs);
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        List<StubMapping> allStubs2 = stubMappingRepository.findAll();
+        wireMockManager.reloadAllStubs(allStubs2 != null ? allStubs2 : new ArrayList<>());
 
         Thread.sleep(1000);
 
@@ -136,7 +139,8 @@ class ComprehensiveBenchmarkTest {
         // 创建单个stub
         StubMapping stub = createStub("pressure-test", "GET", "/api/pressure");
         stubMappingRepository.save(stub);
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        List<StubMapping> allStubs3 = stubMappingRepository.findAll();
+        wireMockManager.reloadAllStubs(allStubs3 != null ? allStubs3 : new ArrayList<>());
 
         Thread.sleep(1000);
 
@@ -192,7 +196,8 @@ class ComprehensiveBenchmarkTest {
         StubMapping stub = createStub("regex-test", "GET", "/api/users/\\d+");
         stub.setUrlMatchType(StubMapping.UrlMatchType.REGEX);
         stubMappingRepository.save(stub);
-        wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
+        List<StubMapping> allStubs4 = stubMappingRepository.findAll();
+        wireMockManager.reloadAllStubs(allStubs4 != null ? allStubs4 : new ArrayList<>());
 
         Thread.sleep(1000);
 

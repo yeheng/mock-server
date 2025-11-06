@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,7 @@ public class StubMappingService {
      * 创建新的 StubMapping
      */
     @Transactional
-    public @NonNull StubMapping createStub(@NonNull StubMapping stub) {
+    public StubMapping createStub(StubMapping stub) {
         log.info("创建新的 Stub: {}", stub.getName());
 
         // 验证WireMock服务器状态
@@ -67,7 +66,7 @@ public class StubMappingService {
      * 分页获取所有 Stubs
      */
     @Transactional(readOnly = true)
-    public Page<StubMapping> getAllStubs(@NonNull Pageable pageable) {
+    public Page<StubMapping> getAllStubs(Pageable pageable) {
         return stubMappingRepository.findAll(pageable);
     }
 
@@ -75,7 +74,7 @@ public class StubMappingService {
      * 获取 StubMapping
      */
     @Transactional(readOnly = true)
-    public Optional<StubMapping> getStubById(@NonNull Long id) {
+    public Optional<StubMapping> getStubById(Long id) {
         return stubMappingRepository.findById(id);
     }
 
@@ -83,7 +82,7 @@ public class StubMappingService {
      * 搜索 Stubs
      */
     @Transactional(readOnly = true)
-    public List<StubMapping> searchStubs(@NonNull String keyword) {
+    public List<StubMapping> searchStubs(String keyword) {
         return stubMappingRepository.findByNameContainingIgnoreCase(keyword);
     }
 
@@ -92,7 +91,7 @@ public class StubMappingService {
      * 使用增量更新，避免全量重载
      */
     @Transactional
-    public StubMapping updateStub(@NonNull Long id, @NonNull StubMapping updatedStub) {
+    public StubMapping updateStub(Long id, StubMapping updatedStub) {
         log.info("更新 Stub: ID={}", id);
 
         StubMapping existingStub = stubMappingRepository.findById(id)
@@ -126,7 +125,7 @@ public class StubMappingService {
      * 删除 StubMapping
      */
     @Transactional
-    public void deleteStub(@NonNull Long id) {
+    public void deleteStub(Long id) {
         log.info("删除 Stub: ID={}", id);
 
         StubMapping stub = stubMappingRepository.findById(id)
@@ -144,7 +143,7 @@ public class StubMappingService {
      * 使用增量更新，避免全量重载
      */
     @Transactional
-    public StubMapping toggleStubEnabled(@NonNull Long id) {
+    public StubMapping toggleStubEnabled(Long id) {
         log.info("切换 Stub 启用状态: ID={}", id);
 
         StubMapping stub = stubMappingRepository.findById(id)

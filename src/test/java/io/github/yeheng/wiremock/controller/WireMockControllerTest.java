@@ -1,6 +1,8 @@
 package io.github.yeheng.wiremock.controller;
 
-import io.github.yeheng.wiremock.service.WireMockManager;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,8 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import io.github.yeheng.wiremock.service.WireMockManager;
 
 /**
  * WireMockController 单元测试
@@ -37,9 +38,10 @@ class WireMockControllerTest {
         // 验证
         assertNotNull(result);
         assertTrue(result.getStatusCode().is2xxSuccessful());
-        assertNotNull(result.getBody());
-        assertEquals(true, result.getBody().get("running"));
-        assertEquals(8081, result.getBody().get("port"));
+        var body = result.getBody();
+        assertNotNull(body);
+        assertEquals(true, body.get("running"));
+        assertEquals(8081, body.get("port"));
         verify(wireMockManager).isRunning();
         verify(wireMockManager, atLeast(1)).getPort();
     }
