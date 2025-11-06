@@ -20,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试基于 URL 查询参数的匹配功能
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_queryparams",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_queryparams",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -61,7 +52,7 @@ class QueryParameterMatchingTest {
     @Test
     @DisplayName("P1场景9: 单个查询参数精确匹配")
     void testSingleQueryParameterExactMatch() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要特定查询参数的 stub
         String createStubJson = """
@@ -118,7 +109,7 @@ class QueryParameterMatchingTest {
     @Test
     @DisplayName("P1场景10: 多个查询参数组合匹配")
     void testMultipleQueryParametersMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要多个查询参数的 stub
         String createStubJson = """
@@ -175,7 +166,7 @@ class QueryParameterMatchingTest {
     @Test
     @DisplayName("P1场景11: 查询参数正则匹配")
     void testQueryParameterRegexMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建使用正则匹配查询参数的 stub
         String createStubJson = """
@@ -229,7 +220,7 @@ class QueryParameterMatchingTest {
     @Test
     @DisplayName("P1场景12: 查询参数包含匹配")
     void testQueryParameterContainsMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建使用包含匹配的 stub
         String createStubJson = """

@@ -1,18 +1,20 @@
 package io.github.yeheng.wiremock.service;
 
-import io.github.yeheng.wiremock.entity.StubMapping;
-import io.github.yeheng.wiremock.repository.StubMappingRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.github.yeheng.wiremock.entity.StubMapping;
+import io.github.yeheng.wiremock.repository.StubMappingRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * StubMapping 服务类
@@ -30,7 +32,7 @@ public class StubMappingService {
      * 创建新的 StubMapping
      */
     @Transactional
-    public StubMapping createStub(@NonNull StubMapping stub) {
+    public @NonNull StubMapping createStub(@NonNull StubMapping stub) {
         log.info("创建新的 Stub: {}", stub.getName());
 
         // 验证WireMock服务器状态
@@ -149,13 +151,13 @@ public class StubMappingService {
                 .orElseThrow(() -> new IllegalArgumentException("Stub 不存在: ID=" + id));
 
         boolean wasEnabled = stub.getEnabled();
-        stub.setEnabled(!stub.getEnabled());
+        stub.setEnabled(!wasEnabled);
         StubMapping savedStub = stubMappingRepository.save(stub);
 
         // 使用增量更新
         if (wasEnabled) {
             // 从启用变为禁用：删除
-            wireMockManager.removeStubMapping(stub);
+            wireMockManager.removeStubMapping(savedStub);
         } else {
             // 从禁用变为启用：添加
             wireMockManager.addStubMapping(savedStub);

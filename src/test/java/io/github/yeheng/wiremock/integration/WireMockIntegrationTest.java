@@ -27,18 +27,9 @@ import io.github.yeheng.wiremock.service.WireMockManager;
  * 集成模式：WireMock 和 Spring Boot 运行在同一个 Undertow 容器中
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -75,8 +66,8 @@ class WireMockIntegrationTest {
     @Test
     @DisplayName("测试创建 stub 并通过 WireMock 调用 - 集成模式")
     void testCreateStubAndCall_IntegratedMode() throws Exception {
-        // 等待 WireMock 启动
-        Thread.sleep(2000);
+        // 等待 WireMock 启动（使用条件等待替代固定 sleep）
+        io.github.yeheng.wiremock.test.WaitUtils.waitForWireMockStart(wireMockManager);
 
         // 1. 创建 stub 配置
         StubMapping stub = new StubMapping();
@@ -103,8 +94,8 @@ class WireMockIntegrationTest {
         // 3. 手动刷新 WireMock（加载所有 stubs）
         wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
 
-        // 4. 等待 WireMock 刷新
-        Thread.sleep(1000);
+        // 4. 等待 WireMock 刷新（WireMock 刷新是同步的，无需等待）
+        // 无需 Thread.sleep，直接继续执行
 
         // 5. 通过 HTTP 调用 stub 端点
         // 使用相同的端口和容器
@@ -117,9 +108,12 @@ class WireMockIntegrationTest {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         // 6. 验证响应
-        assertEquals(200, response.statusCode());
+        System.out.println("响应状态码: " + response.statusCode());
+        System.out.println("响应头: " + response.headers());
         String responseBody = response.body();
         System.out.println("GET响应: " + responseBody);
+        System.out.println("响应体长度: " + responseBody.length());
+        assertEquals(200, response.statusCode());
         assertNotNull(responseBody);
 
         // 验证响应包含期望的内容
@@ -136,8 +130,8 @@ class WireMockIntegrationTest {
     @Test
     @DisplayName("测试创建 POST stub 并调用 - 集成模式")
     void testCreatePostStubAndCall_IntegratedMode() throws Exception {
-        // 等待 WireMock 启动
-        Thread.sleep(2000);
+        // 等待 WireMock 启动（使用条件等待替代固定 sleep）
+        io.github.yeheng.wiremock.test.WaitUtils.waitForWireMockStart(wireMockManager);
 
         // 1. 创建 POST stub
         StubMapping stub = new StubMapping();
@@ -158,9 +152,8 @@ class WireMockIntegrationTest {
         StubMapping savedStub = stubMappingService.createStub(stub);
         assertNotNull(savedStub.getId());
 
-        // 3. 刷新 WireMock
+        // 3. 刷新 WireMock（同步操作，无需等待）
         wireMockManager.reloadAllStubs(stubMappingRepository.findAll());
-        Thread.sleep(1000);
 
         // 4. 调用 WireMock
         String stubUrl = "http://localhost:" + port + "/api/users";

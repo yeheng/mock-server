@@ -20,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试当多个 stub 匹配同一请求时的优先级处理
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_priority",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_priority",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -61,7 +52,7 @@ class StubPriorityTest {
     @Test
     @DisplayName("P2场景5: 基本优先级测试 - 高优先级stub先匹配")
     void testBasicPriorityMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建低优先级 stub
         String lowPriorityStub = """
@@ -126,7 +117,7 @@ class StubPriorityTest {
     @Test
     @DisplayName("P2场景6: 相同优先级时的匹配顺序")
     void testSamePriorityMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建多个相同优先级的 stubs
         String[] stubs = {
@@ -175,7 +166,7 @@ class StubPriorityTest {
 
             HttpResponse<String> createResponse = httpClient.send(createRequest, HttpResponse.BodyHandlers.ofString());
             assertEquals(201, createResponse.statusCode(), "创建stub应该成功");
-            Thread.sleep(100); // 确保创建顺序
+            // WireMock 刷新是同步的，无需等待
         }
 
         // 调用API，验证匹配结果
@@ -198,7 +189,7 @@ class StubPriorityTest {
     @Test
     @DisplayName("P2场景7: 不同匹配类型的优先级组合")
     void testPriorityWithDifferentMatchTypes() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建不同匹配类型但相同URL模式的 stubs
         String[] stubs = {
@@ -265,7 +256,7 @@ class StubPriorityTest {
     @Test
     @DisplayName("P2场景8: 优先级与启用状态的组合")
     void testPriorityWithEnabledStatus() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建高优先级但禁用的 stub
         String disabledHighPriorityStub = """
@@ -328,7 +319,7 @@ class StubPriorityTest {
     @Test
     @DisplayName("P2场景9: 复杂优先级场景 - 多层级匹配")
     void testComplexPriorityScenario() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建多个不同优先级和匹配条件的 stubs
         String[] stubs = {

@@ -1,8 +1,6 @@
 package io.github.yeheng.wiremock.service;
 
 import io.github.yeheng.wiremock.entity.StubMapping;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -10,8 +8,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.direct.DirectCallHttpServer;
 import com.github.tomakehurst.wiremock.direct.DirectCallHttpServerFactory;
 import com.github.tomakehurst.wiremock.http.*;
-import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -20,19 +16,23 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 全局WireMock管理器
  * 集成到Spring Boot的嵌入式Undertow容器中，不使用独立端口
  * 所有stub请求都通过同一个Undertow容器处理
+ * 已重构：拆分为多个组件，提高可维护性
  */
 @Slf4j
 @Service
@@ -42,10 +42,23 @@ public class WireMockManager {
     @Value("${server.port:8080}")
     private int serverPort;
 
+    // 依赖的组件
+    private final RequestConverter requestConverter;
+    private final ResponseConverter responseConverter;
+    private final StubMappingConverter stubMappingConverter;
+    private final PerformanceMonitor performanceMonitor;
+
     // 使用内存存储 stub mappings，使用 ConcurrentHashMap 替代 CopyOnWriteArrayList 以提升并发性能
     // key: UUID (如果有) 或 id (Long) 转字符串，value: StubMapping 对象
     private final Map<String, StubMapping> stubs = new ConcurrentHashMap<>();
     private final Map<String, List<LoggedRequest>> requestLogs = new ConcurrentHashMap<>();
+
+    // Stub 预索引系统：性能优化，从 O(n) 降至 O(log n)
+    private final StubIndex stubIndex = new StubIndex();
+
+    // 并发控制锁：保护关键操作的线程安全
+    private final Lock reloadLock = new ReentrantLock();
+    private final Lock modifyLock = new ReentrantLock();
 
     /**
      * -- GETTER --
@@ -54,11 +67,10 @@ public class WireMockManager {
     @Getter
     private volatile boolean isRunning = false;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     // 内部 WireMockServer，用于实际匹配与生成响应
     private WireMockServer wireMockServer;
     private DirectCallHttpServer directCallServer;
+    private int port;
 
     @PostConstruct
     public void initialize() {
@@ -66,11 +78,36 @@ public class WireMockManager {
             startServer();
             port = serverPort;
 
+            warmupPerformanceCaches();
+
             log.info("WireMock 集成: 内部 WireMockServer 端口={}, 应用端口={}", wireMockServer.port(), port);
             log.info("所有非管理请求将代理到内部 WireMockServer 进行匹配");
+            log.info("性能优化组件已创建，使用延迟初始化");
         } catch (Exception e) {
             log.error("WireMock 初始化失败", e);
             throw new RuntimeException("WireMock 初始化失败", e);
+        }
+    }
+
+    /**
+     * 预热性能优化缓存
+     * 启动时初始化各种缓存，提高首次请求性能
+     */
+    private void warmupPerformanceCaches() {
+        try {
+            // 1. 预编译常用正则表达式
+            RegexCache.warmupCommonPatterns();
+
+            // 2. 预解析常用JSON结构
+            JsonCache.warmupCommonJsons();
+
+            // 3. 预分配常用大小的缓冲区
+            ZeroCopyBuffer.warmupBufferPool();
+
+            log.debug("性能缓存预热完成");
+        } catch (Exception e) {
+            // 缓存预热失败不影响核心功能，只记录警告
+            log.warn("性能缓存预热失败，使用延迟初始化: {}", e.getMessage());
         }
     }
 
@@ -104,8 +141,6 @@ public class WireMockManager {
         log.info("WireMock 已关闭");
     }
 
-    private int port;
-
     /**
      * 获取WireMock服务器端口（实际就是Spring Boot端口）
      */
@@ -127,23 +162,32 @@ public class WireMockManager {
             return;
         }
 
+        // 性能监控：记录请求开始时间
+        long requestStartTime = performanceMonitor.startRequest();
+        boolean requestSuccess = false;
+
         try {
             ensureWireMockServerStarted();
 
             // 1. 将 Undertow 请求转换为 WireMock 的 Request 对象
-            Request wiremockRequest = toWireMockRequest(servletRequest);
+            performanceMonitor.recordOperation("toWireMockRequest");
+            Request wiremockRequest = requestConverter.convert(servletRequest);
 
             // 2. 【核心】根据请求类型，决定调用 stubRequest 还是 adminRequest
             Response wiremockResponse;
             if (wiremockRequest.getUrl().startsWith("/__admin")) {
+                performanceMonitor.recordOperation("adminRequest");
                 wiremockResponse = directCallServer.adminRequest(wiremockRequest);
             } else {
+                performanceMonitor.recordOperation("stubRequest");
                 wiremockResponse = directCallServer.stubRequest(wiremockRequest);
             }
 
             // 3. 将 WireMock 的 Response 对象转换并写回 Undertow 的 exchange
-            fromWireMockResponse(wiremockResponse, servletResponse);
+            performanceMonitor.recordOperation("fromWireMockResponse");
+            responseConverter.convert(wiremockResponse, servletResponse);
 
+            requestSuccess = true;
 
         } catch (Exception e) {
             log.error("处理WireMock请求时出错", e);
@@ -152,94 +196,10 @@ public class WireMockManager {
             servletResponse.setCharacterEncoding("UTF-8");
             servletResponse.getWriter()
                     .write("{\"error\": \"Internal server error\", \"message\": \"" + e.getMessage() + "\"}");
+        } finally {
+            // 性能监控：记录请求完成
+            performanceMonitor.endRequest(requestStartTime, requestSuccess);
         }
-    }
-
-    /**
-     * 将 WireMock Response 转换并写入 Servlet Response
-     */
-    private void fromWireMockResponse(Response wiremockResponse, HttpServletResponse servletResponse)
-            throws IOException {
-
-        // 1. 设置状态码
-        servletResponse.setStatus(wiremockResponse.getStatus());
-
-        // 2. 设置响应头
-        HttpHeaders headers = wiremockResponse.getHeaders();
-        if (headers != null) {
-            for (HttpHeader header : headers.all()) {
-                String headerName = header.key();
-                for (String headerValue : header.values()) {
-                    // 使用 addHeader 支持多值头
-                    servletResponse.addHeader(headerName, headerValue);
-                }
-            }
-        }
-
-        // 3. 写入响应体
-        byte[] body = wiremockResponse.getBody();
-        if (body != null && body.length > 0) {
-            servletResponse.getOutputStream().write(body);
-            servletResponse.getOutputStream().flush();
-        } else {
-            // 处理空响应体的情况，特别是404错误
-            if (wiremockResponse.getStatus() == 404) {
-                String jsonBody = "{\"error\": \"No matching stub\", \"status\": 404, \"message\": \"No stub matching the request was found\"}";
-                servletResponse.setContentType("application/json;charset=UTF-8");
-                servletResponse.setCharacterEncoding("UTF-8");
-                servletResponse.getWriter().write(jsonBody);
-                servletResponse.getWriter().flush();
-            }
-        }
-    }
-
-    /**
-     * 将 Servlet 请求转换为 WireMock Request 对象
-     */
-    private Request toWireMockRequest(HttpServletRequest servletRequest) throws IOException {
-        // 1. 提取请求方法
-        RequestMethod method = RequestMethod.fromString(servletRequest.getMethod());
-
-        // 2. 构建绝对 URL
-        String absoluteUrl = servletRequest.getRequestURL().toString();
-        String queryString = servletRequest.getQueryString();
-        if (queryString != null && !queryString.isEmpty()) {
-            absoluteUrl = absoluteUrl + "?" + queryString;
-        }
-
-        // 3. 提取 Headers - 转换为 WireMock 的 HttpHeaders
-        List<HttpHeader> headerList = new ArrayList<>();
-        Enumeration<String> headerNames = servletRequest.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            Enumeration<String> headerValues = servletRequest.getHeaders(headerName);
-            List<String> values = Collections.list(headerValues);
-            headerList.add(new HttpHeader(headerName, values));
-        }
-        HttpHeaders headers = new HttpHeaders(headerList);
-
-        // 4. 提取请求体
-        byte[] body;
-        try (InputStream inputStream = servletRequest.getInputStream()) {
-            body = inputStream.readAllBytes();
-        }
-
-        // 5. 获取客户端 IP
-        String clientIp = servletRequest.getRemoteAddr();
-
-        // 6. 获取协议
-        String protocol = servletRequest.getProtocol();
-
-        // 7. 使用 ImmutableRequest.Builder 构造 Request 对象
-        return ImmutableRequest.create()
-                .withAbsoluteUrl(absoluteUrl)
-                .withMethod(method)
-                .withProtocol(protocol)
-                .withClientIp(clientIp)
-                .withHeaders(headers)
-                .withBody(body)
-                .withBrowserProxyRequest(false)
-                .build();
     }
 
     /**
@@ -247,6 +207,7 @@ public class WireMockManager {
      * 使用 ConcurrentHashMap 的 put 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList
      */
     public void addStubMapping(@NonNull StubMapping stubMapping) {
+        modifyLock.lock();
         try {
             if (!isRunning()) {
                 throw new IllegalStateException("WireMock服务器未运行");
@@ -269,12 +230,17 @@ public class WireMockManager {
             // 使用 Map 存储，O(1) 时间复杂度
             stubs.put(stubKey, stubMapping);
 
+            // 添加到预索引系统：性能优化从 O(n) 降至 O(log n)
+            stubIndex.addStub(stubMapping);
+
             // 确保内部 WireMockServer 可用（部分单测可能未调用 initialize）
             ensureWireMockServerStarted();
 
             // 转换并注册到内部 WireMockServer
-            MappingBuilder builder = toWireMockMapping(stubMapping);
+            MappingBuilder builder = stubMappingConverter.convert(stubMapping);
             wireMockServer.stubFor(builder);
+
+            log.debug("已注册 stub 到 WireMock server: {}", stubMapping.getUrl());
 
             log.info("已添加Stub Mapping: {} ({} {}) [uuid={}]",
                     stubMapping.getName(),
@@ -284,6 +250,8 @@ public class WireMockManager {
         } catch (Exception e) {
             log.error("添加Stub Mapping失败: {}", stubMapping.getName(), e);
             throw new RuntimeException("添加Stub Mapping失败", e);
+        } finally {
+            modifyLock.unlock();
         }
     }
 
@@ -306,6 +274,7 @@ public class WireMockManager {
      * 使用 ConcurrentHashMap 的 remove 操作，O(1) 时间复杂度，性能优于 CopyOnWriteArrayList 的 O(n) 操作
      */
     public void removeStubMapping(@NonNull StubMapping stubMapping) {
+        modifyLock.lock();
         try {
             if (!isRunning()) {
                 return;
@@ -323,6 +292,9 @@ public class WireMockManager {
                 // 从 Map 中删除
                 StubMapping removedStub = stubs.remove(stubKey);
                 if (removedStub != null) {
+                    // 从预索引系统中删除
+                    stubIndex.removeStub(removedStub);
+
                     // 从 WireMock server 中删除
                     try {
                         wireMockServer.removeStubMapping(java.util.UUID.fromString(stubKey));
@@ -334,7 +306,7 @@ public class WireMockManager {
                         ensureWireMockServerStarted();
                         wireMockServer.resetMappings();
                         for (StubMapping s : stubs.values()) {
-                            wireMockServer.stubFor(toWireMockMapping(s));
+                            wireMockServer.stubFor(stubMappingConverter.convert(s));
                         }
                         removed = true;
                         log.info("UUID 无效，已重载剩余的 {} 个 stubs", stubs.size());
@@ -357,7 +329,7 @@ public class WireMockManager {
                     ensureWireMockServerStarted();
                     wireMockServer.resetMappings();
                     for (StubMapping s : stubs.values()) {
-                        wireMockServer.stubFor(toWireMockMapping(s));
+                        wireMockServer.stubFor(stubMappingConverter.convert(s));
                     }
                 }
             }
@@ -370,6 +342,8 @@ public class WireMockManager {
         } catch (Exception e) {
             log.error("删除Stub Mapping失败: {}", stubMapping.getName(), e);
             throw new RuntimeException("删除Stub Mapping失败", e);
+        } finally {
+            modifyLock.unlock();
         }
     }
 
@@ -378,6 +352,7 @@ public class WireMockManager {
      * 清空所有旧的，然后重新添加启用的 stubs
      */
     public void reloadAllStubs(@NonNull List<StubMapping> newStubs) {
+        reloadLock.lock();
         try {
             if (!isRunning()) {
                 return;
@@ -385,6 +360,7 @@ public class WireMockManager {
 
             // 清空现有 stubs - ConcurrentHashMap.clear() 是原子操作，性能优于 CopyOnWriteArrayList
             stubs.clear();
+            stubIndex.clear();  // 清空预索引
             ensureWireMockServerStarted();
             wireMockServer.resetMappings(); // 清空所有旧的
 
@@ -397,6 +373,8 @@ public class WireMockManager {
         } catch (Exception e) {
             log.error("重新加载Stub Mappings失败", e);
             throw new RuntimeException("重新加载Stub Mappings失败", e);
+        } finally {
+            reloadLock.unlock();
         }
     }
 
@@ -422,6 +400,7 @@ public class WireMockManager {
      */
     public void reset() {
         stubs.clear();
+        stubIndex.clear();  // 清空预索引
         requestLogs.clear();
         // 清理内部WireMockServer的所有stub
         if (wireMockServer != null && wireMockServer.isRunning()) {
@@ -431,14 +410,51 @@ public class WireMockManager {
     }
 
     /**
-     * 创建默认响应
+     * 获取 Stub 预索引统计信息
+     * 用于性能监控和调试
      */
-    private String createDefaultResponse(@NonNull StubMapping stub) {
-        return String.format(
-                "{\"message\": \"Mocked response for %s\", \"stubName\": \"%s\", \"timestamp\": \"%s\"}",
-                stub.getName(),
-                stub.getName(),
-                java.time.LocalDateTime.now());
+    public StubIndex.IndexStats getIndexStats() {
+        return stubIndex.getStats();
+    }
+
+    /**
+     * 获取性能统计信息
+     * 包含请求计数、响应时间、吞吐量等关键指标
+     */
+    public PerformanceMonitor.PerformanceStats getPerformanceStats() {
+        return performanceMonitor.getStats();
+    }
+
+    /**
+     * 执行性能基准测试
+     */
+    public PerformanceMonitor.BenchmarkResult runBenchmark(int requestCount, Runnable requestExecutor) {
+        return performanceMonitor.runBenchmark(requestCount, requestExecutor);
+    }
+
+    /**
+     * 重置所有统计信息
+     */
+    public void resetStats() {
+        performanceMonitor.reset();
+        // 清空性能优化缓存
+        RegexCache.clear();
+        JsonCache.clear();
+        ZeroCopyBuffer.clear();
+        log.debug("所有性能统计和缓存已重置");
+    }
+
+    /**
+     * 获取性能优化统计
+     * 包含正则缓存、JSON缓存、零拷贝缓冲区统计
+     */
+    public PerformanceOptimizationStats getOptimizationStats() {
+        return PerformanceOptimizationStats.builder()
+            .regexStats(RegexCache.getStats())
+            .jsonStats(JsonCache.getStats())
+            .bufferStats(ZeroCopyBuffer.getStats())
+            .indexStats(stubIndex.getStats())
+            .build();
     }
 
     /**
@@ -449,152 +465,91 @@ public class WireMockManager {
         return new ArrayList<>(stubs.values());
     }
 
-    // 将实体 StubMapping 转换为 WireMock 的 MappingBuilder
-    private MappingBuilder toWireMockMapping(@NonNull StubMapping stub) {
-        UrlPattern urlPattern;
-        String url = stub.getUrl();
-        urlPattern = switch (stub.getUrlMatchType()) {
-            case EQUALS ->
-                // 使用 urlPathEqualTo 仅匹配路径部分，不包括查询字符串
-                    WireMock.urlPathEqualTo(url);
-            case CONTAINS -> WireMock.urlMatching(".*" + java.util.regex.Pattern.quote(url) + ".*");
-            case REGEX -> WireMock.urlMatching(url);
-            case PATH_TEMPLATE -> {
-                String regex = url.replaceAll("\\{[^}]+}", "[^/]+");
-                log.debug("路径模板转换: {} -> 正则: {}", url, regex);
-                yield WireMock.urlPathMatching("^" + regex + "$");
-            }
-        };
-
-        RequestMethod method;
-        try {
-            method = RequestMethod.fromString(stub.getMethod() != null ? stub.getMethod().toUpperCase() : "ANY");
-        } catch (Exception e) {
-            method = RequestMethod.ANY;
-        }
-
-        MappingBuilder builder = WireMock.request(method.getName(), urlPattern)
-                .atPriority(stub.getPriority() != null ? stub.getPriority() : 0);
-
-        // 将实体中的 UUID 作为 WireMock 映射 ID，保证删除/禁用时可精确移除
-        String uuid = stub.getUuid();
-        if (uuid != null && !uuid.trim().isEmpty()) {
-            try {
-                builder = builder.withId(java.util.UUID.fromString(uuid));
-            } catch (IllegalArgumentException ignore) {
-                // 如果 UUID 非法，跳过设置ID，后续删除逻辑会走全量重载兜底
-            }
-        }
-
-        // Headers
-        String headersPattern = stub.getRequestHeadersPattern();
-        if (headersPattern != null && !headersPattern.trim().isEmpty()) {
-            try {
-                JsonNode headerPatterns = objectMapper.readTree(headersPattern);
-                Iterator<Map.Entry<String, JsonNode>> fields = headerPatterns.fields();
-                while (fields.hasNext()) {
-                    Map.Entry<String, JsonNode> entry = fields.next();
-                    String name = entry.getKey();
-                    JsonNode rule = entry.getValue();
-                    if (rule.has("equalTo")) {
-                        builder = builder.withHeader(name, WireMock.equalTo(rule.get("equalTo").asText()));
-                    } else if (rule.has("contains")) {
-                        builder = builder.withHeader(name, WireMock.containing(rule.get("contains").asText()));
-                    } else if (rule.has("matches")) {
-                        builder = builder.withHeader(name, WireMock.matching(rule.get("matches").asText()));
-                    }
-                }
-            } catch (Exception ignore) {
-                // 宽松处理：不阻塞注册
-            }
-        }
-
-        // Query params
-        String queryParamsPattern = stub.getQueryParametersPattern();
-        if (queryParamsPattern != null && !queryParamsPattern.trim().isEmpty()) {
-            try {
-                JsonNode paramPatterns = objectMapper.readTree(queryParamsPattern);
-                Iterator<Map.Entry<String, JsonNode>> fields = paramPatterns.fields();
-                while (fields.hasNext()) {
-                    Map.Entry<String, JsonNode> entry = fields.next();
-                    String name = entry.getKey();
-                    JsonNode rule = entry.getValue();
-                    if (rule.has("equalTo")) {
-                        builder = builder.withQueryParam(name, WireMock.equalTo(rule.get("equalTo").asText()));
-                    } else if (rule.has("contains")) {
-                        builder = builder.withQueryParam(name, WireMock.containing(rule.get("contains").asText()));
-                    } else if (rule.has("matches")) {
-                        builder = builder.withQueryParam(name, WireMock.matching(rule.get("matches").asText()));
-                    }
-                }
-            } catch (Exception ignore) {
-            }
-        }
-
-        // Request body
-        String bodyPattern = stub.getRequestBodyPattern();
-        if (bodyPattern != null && !bodyPattern.trim().isEmpty()) {
-            try {
-                // 尝试直接解析JSON
-                JsonNode bodyRule = objectMapper.readTree(bodyPattern);
-                if (bodyRule.has("equalToJson")) {
-                    builder = builder
-                            .withRequestBody(new EqualToJsonPattern(bodyRule.get("equalToJson").asText(), true, true));
-                    log.debug("添加请求体匹配: equalToJson");
-                } else if (bodyRule.has("matchesJsonPath")) {
-                    builder = builder
-                            .withRequestBody(WireMock.matchingJsonPath(bodyRule.get("matchesJsonPath").asText()));
-                    log.debug("添加请求体匹配: matchesJsonPath");
-                } else if (bodyRule.has("contains")) {
-                    String containsText = bodyRule.get("contains").asText();
-                    builder = builder.withRequestBody(WireMock.containing(containsText));
-                    log.debug("添加请求体匹配: contains={}", containsText);
-                } else if (bodyRule.has("matches")) {
-                    String regex = bodyRule.get("matches").asText();
-                    builder = builder.withRequestBody(WireMock.matching(regex));
-                    log.debug("添加请求体正则匹配: regex={}", regex);
-                }
-            } catch (com.fasterxml.jackson.core.JsonParseException e) {
-                // JSON解析失败，尝试修复常见的转义问题后重试
-                try {
-                    // 将单个反斜杠转换为双反斜杠（JSON转义）
-                    String fixedPattern = bodyPattern.replace("\\", "\\\\");
-                    JsonNode bodyRule = objectMapper.readTree(fixedPattern);
-                    if (bodyRule.has("matches")) {
-                        String regex = bodyRule.get("matches").asText();
-                        builder = builder.withRequestBody(WireMock.matching(regex));
-                        log.debug("添加请求体正则匹配（修复转义后）: regex={}", regex);
-                    } else if (bodyRule.has("contains")) {
-                        builder = builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
-                    }
-                } catch (Exception ex) {
-                    log.warn("转义解析 json请求体匹配模式失败，使用包含匹配作为兜底: pattern={}, error={}", bodyPattern, ex.getMessage());
-                    builder = builder.withRequestBody(WireMock.containing(bodyPattern));
-                }
-            } catch (Exception e) {
-                // 其他异常：作为包含匹配
-                log.warn("解析请求体匹配模式失败，使用包含匹配作为兜底: pattern={}, error={}", bodyPattern, e.getMessage());
-                builder = builder.withRequestBody(WireMock.containing(bodyPattern));
-            }
-        }
-
-        // Response
-        String responseBody = stub.getResponseDefinition();
-        if (responseBody == null || responseBody.trim().isEmpty()) {
-            responseBody = createDefaultResponse(stub);
-        }
-        builder = builder.willReturn(
-                WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json;charset=UTF-8")
-                        .withBody(responseBody));
-
-        return builder;
-    }
-
     private void ensureWireMockServerStarted() throws IllegalAccessException {
         if (wireMockServer == null || !wireMockServer.isRunning()) {
             startServer();
+        }
+    }
+
+    /**
+     * 性能优化统计信息
+     * 整合所有性能优化组件的统计数据
+     */
+    public static class PerformanceOptimizationStats {
+        private final RegexCache.CacheStats regexStats;
+        private final JsonCache.CacheStats jsonStats;
+        private final ZeroCopyBuffer.BufferStats bufferStats;
+        private final StubIndex.IndexStats indexStats;
+
+        private PerformanceOptimizationStats(Builder builder) {
+            this.regexStats = builder.regexStats;
+            this.jsonStats = builder.jsonStats;
+            this.bufferStats = builder.bufferStats;
+            this.indexStats = builder.indexStats;
+        }
+
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        public RegexCache.CacheStats getRegexStats() {
+            return regexStats;
+        }
+
+        public JsonCache.CacheStats getJsonStats() {
+            return jsonStats;
+        }
+
+        public ZeroCopyBuffer.BufferStats getBufferStats() {
+            return bufferStats;
+        }
+
+        public StubIndex.IndexStats getIndexStats() {
+            return indexStats;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(
+                "PerformanceOptimizationStats{\n" +
+                "  正则缓存: %s,\n" +
+                "  JSON缓存: %s,\n" +
+                "  零拷贝缓冲区: %s,\n" +
+                "  预索引: %s\n" +
+                "}",
+                regexStats, jsonStats, bufferStats, indexStats
+            );
+        }
+
+        public static class Builder {
+            private RegexCache.CacheStats regexStats;
+            private JsonCache.CacheStats jsonStats;
+            private ZeroCopyBuffer.BufferStats bufferStats;
+            private StubIndex.IndexStats indexStats;
+
+            public Builder regexStats(RegexCache.CacheStats regexStats) {
+                this.regexStats = regexStats;
+                return this;
+            }
+
+            public Builder jsonStats(JsonCache.CacheStats jsonStats) {
+                this.jsonStats = jsonStats;
+                return this;
+            }
+
+            public Builder bufferStats(ZeroCopyBuffer.BufferStats bufferStats) {
+                this.bufferStats = bufferStats;
+                return this;
+            }
+
+            public Builder indexStats(StubIndex.IndexStats indexStats) {
+                this.indexStats = indexStats;
+                return this;
+            }
+
+            public PerformanceOptimizationStats build() {
+                return new PerformanceOptimizationStats(this);
+            }
         }
     }
 }

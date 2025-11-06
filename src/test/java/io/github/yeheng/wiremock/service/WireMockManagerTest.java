@@ -30,6 +30,18 @@ import jakarta.servlet.http.HttpServletResponse;
 @DisplayName("WireMockManager 测试")
 class WireMockManagerTest {
 
+    @Mock(lenient = true)
+    private RequestConverter requestConverter;
+
+    @Mock(lenient = true)
+    private ResponseConverter responseConverter;
+
+    @Mock(lenient = true)
+    private StubMappingConverter stubMappingConverter;
+
+    @Mock(lenient = true)
+    private PerformanceMonitor performanceMonitor;
+
     @InjectMocks
     private WireMockManager wireMockManager;
 
@@ -109,6 +121,14 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 addStubMapping - 启用状态的 Stub")
     void testAddStubMapping_EnabledStub() {
+        // 准备 - 创建真实的 MappingBuilder
+        com.github.tomakehurst.wiremock.client.MappingBuilder realBuilder =
+            com.github.tomakehurst.wiremock.client.WireMock.get("/api/test")
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody("{\"message\": \"test response\"}"));
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenReturn(realBuilder);
+
         // 执行
         assertDoesNotThrow(() -> {
             wireMockManager.addStubMapping(testStub);
@@ -123,6 +143,14 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 addStubMapping - 禁用状态的 Stub")
     void testAddStubMapping_DisabledStub() {
+        // 准备 - 创建真实的 MappingBuilder
+        com.github.tomakehurst.wiremock.client.MappingBuilder realBuilder =
+            com.github.tomakehurst.wiremock.client.WireMock.post("/api/disabled")
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody("{\"message\": \"disabled response\"}"));
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenReturn(realBuilder);
+
         // 执行 - 禁用的 stub 不应该被添加到 WireMock
         assertDoesNotThrow(() -> {
             wireMockManager.addStubMapping(disabledStub);
@@ -136,6 +164,28 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 addStubMapping - 不同 HTTP 方法")
     void testAddStubMapping_DifferentHttpMethods() {
+        // 准备 - 创建真实的 MappingBuilder
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenAnswer(invocation -> {
+            StubMapping stub = invocation.getArgument(0);
+            com.github.tomakehurst.wiremock.client.MappingBuilder builder;
+            switch (stub.getMethod().toUpperCase()) {
+                case "GET":
+                    builder = com.github.tomakehurst.wiremock.client.WireMock.get(stub.getUrl());
+                    break;
+                case "POST":
+                    builder = com.github.tomakehurst.wiremock.client.WireMock.post(stub.getUrl());
+                    break;
+                case "PUT":
+                    builder = com.github.tomakehurst.wiremock.client.WireMock.put(stub.getUrl());
+                    break;
+                default:
+                    builder = com.github.tomakehurst.wiremock.client.WireMock.get("/any");
+            }
+            return builder.willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                .withStatus(200)
+                .withBody(stub.getResponseDefinition()));
+        });
+
         // 准备
         StubMapping postStub = new StubMapping();
         postStub.setName("POST接口");
@@ -164,6 +214,15 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 removeStubMapping - 成功删除")
     void testRemoveStubMapping_Success() {
+        // 准备 - 创建真实的 MappingBuilder
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenAnswer(invocation -> {
+            StubMapping stub = invocation.getArgument(0);
+            return com.github.tomakehurst.wiremock.client.WireMock.get(stub.getUrl())
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody(stub.getResponseDefinition()));
+        });
+
         // 准备
         wireMockManager.addStubMapping(testStub);
         assertEquals(1, wireMockManager.getAllStubs().size());
@@ -189,6 +248,15 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 reloadAllStubs")
     void testReloadAllStubs() {
+        // 准备 - 创建真实的 MappingBuilder
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenAnswer(invocation -> {
+            StubMapping stub = invocation.getArgument(0);
+            return com.github.tomakehurst.wiremock.client.WireMock.get(stub.getUrl())
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody(stub.getResponseDefinition()));
+        });
+
         // 准备
         wireMockManager.addStubMapping(testStub);
         assertEquals(1, wireMockManager.getAllStubs().size());
@@ -257,6 +325,15 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 reset - 服务器运行中")
     void testReset_ServerRunning() {
+        // 准备 - 创建真实的 MappingBuilder
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenAnswer(invocation -> {
+            StubMapping stub = invocation.getArgument(0);
+            return com.github.tomakehurst.wiremock.client.WireMock.get(stub.getUrl())
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody(stub.getResponseDefinition()));
+        });
+
         // 准备
         wireMockManager.addStubMapping(testStub);
         assertEquals(1, wireMockManager.getAllStubs().size());
@@ -281,6 +358,15 @@ class WireMockManagerTest {
     @Test
     @DisplayName("测试 getAllStubs")
     void testGetAllStubs() {
+        // 准备 - 创建真实的 MappingBuilder
+        when(stubMappingConverter.convert(any(StubMapping.class))).thenAnswer(invocation -> {
+            StubMapping stub = invocation.getArgument(0);
+            return com.github.tomakehurst.wiremock.client.WireMock.get(stub.getUrl())
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                    .withStatus(200)
+                    .withBody(stub.getResponseDefinition()));
+        });
+
         // 准备
         wireMockManager.addStubMapping(testStub);
 

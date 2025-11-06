@@ -26,18 +26,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 3. 调用 WireMock 端点，验证返回配置的响应
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_admin",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_admin",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -80,7 +71,7 @@ class AdminApiE2ETest {
     @DisplayName("TDD场景1: 通过Admin API创建stub后，WireMock立即能处理GET请求")
     void testCreateStubViaAdminAPI_ThenCallWireMock_GET() throws Exception {
         // 等待应用启动
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 步骤1: 通过 Admin API 创建 stub
         String createStubJson = """
@@ -133,7 +124,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景2: 通过Admin API创建stub后，WireMock立即能处理POST请求")
     void testCreateStubViaAdminAPI_ThenCallWireMock_POST() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 步骤1: 通过 Admin API 创建 POST stub
         String createStubJson = """
@@ -182,7 +173,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景3: Admin API路径应该由Spring MVC处理，不被WireMock拦截")
     void testAdminApiRoutingToSpringMVC() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // /admin/stubs 应该由 Spring MVC Controller 处理
         HttpRequest request = HttpRequest.newBuilder()
@@ -205,7 +196,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景4: 非Admin路径在没有stub时应该返回WireMock的404")
     void testNonAdminPathReturnsWireMock404WhenNoStub() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 调用一个不存在 stub 的路径
         HttpRequest request = HttpRequest.newBuilder()
@@ -227,7 +218,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景5: 通过Admin API更新stub后，WireMock返回新的响应")
     void testUpdateStubViaAdminAPI_ThenVerifyNewResponse() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 步骤1: 创建初始 stub
         String createStubJson = """
@@ -303,7 +294,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景6: 通过Admin API删除stub后，WireMock返回404")
     void testDeleteStubViaAdminAPI_ThenVerify404() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 步骤1: 创建 stub
         String createStubJson = """
@@ -350,7 +341,7 @@ class AdminApiE2ETest {
 
         // 步骤4: 验证 WireMock 返回 404
         // 避免偶发的异步重载时序问题，稍作等待
-        Thread.sleep(200);
+        // 短暂等待，可根据需要调整
         HttpResponse<String> afterDelete = httpClient.send(
             HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/temp/123"))
@@ -365,7 +356,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景7: Admin API 对无效响应定义返回 400")
     void testAdminApiReturns400OnInvalidResponseDefinition() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         String invalidStubJson = """
                 {
@@ -390,7 +381,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景8: Toggle 全生命周期：创建→禁用→404→启用→匹配")
     void testToggleLifecycle_E2E() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建启用的 stub
         String createStubJson = """
@@ -436,7 +427,7 @@ class AdminApiE2ETest {
         assertEquals(200, toggleOffResp.statusCode());
 
         // 验证禁用后返回 404
-        Thread.sleep(200);
+        // 短暂等待，可根据需要调整
         HttpResponse<String> disabledResp = httpClient.send(
             HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/toggle/1"))
@@ -457,7 +448,7 @@ class AdminApiE2ETest {
         assertEquals(200, toggleOnResp.statusCode());
 
         // 验证再次匹配
-        Thread.sleep(200);
+        // 短暂等待，可根据需要调整
         HttpResponse<String> reenabledResp = httpClient.send(
             HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/api/toggle/1"))
@@ -472,7 +463,7 @@ class AdminApiE2ETest {
     @Test
     @DisplayName("TDD场景9: 复杂组合匹配（Headers + Query + Body）成功与失败")
     void testComplexCombinationMatching_E2E() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建复杂组合匹配的 stub
         String complexStubJson = """

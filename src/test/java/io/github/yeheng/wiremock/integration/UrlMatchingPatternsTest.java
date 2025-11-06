@@ -20,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试 CONTAINS, REGEX, PATH_TEMPLATE 等 URL 匹配模式
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_urlpatterns",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_urlpatterns",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -62,7 +53,7 @@ class UrlMatchingPatternsTest {
     @Test
     @DisplayName("P1场景1: URL CONTAINS 匹配 - URL包含指定字符串")
     void testUrlContainsMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建 stub：URL 包含 "product"
         String createStubJson = """
@@ -111,7 +102,7 @@ class UrlMatchingPatternsTest {
     @Test
     @DisplayName("P1场景2: URL REGEX 匹配 - 使用正则表达式匹配URL")
     void testUrlRegexMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建 stub：使用正则表达式匹配 /api/users/数字ID
         String createStubJson = """
@@ -177,7 +168,7 @@ class UrlMatchingPatternsTest {
     @Test
     @DisplayName("P1场景3: URL PATH_TEMPLATE 匹配 - 使用路径模板匹配")
     void testUrlPathTemplateMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建 stub：使用路径模板 /api/orders/{orderId}/items/{itemId}
         String createStubJson = """
@@ -243,7 +234,7 @@ class UrlMatchingPatternsTest {
     @Test
     @DisplayName("P1场景4: 多个URL匹配模式组合测试")
     void testMultipleUrlMatchingPatterns() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建多个不同匹配模式的 stubs
         String[] stubs = {

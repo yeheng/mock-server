@@ -20,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试基于 HTTP 请求体内容的匹配功能
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_requestbody",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_requestbody",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -61,7 +52,7 @@ class RequestBodyMatchingTest {
     @Test
     @DisplayName("P1场景13: JSON请求体精确匹配")
     void testJsonBodyExactMatch() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要特定JSON请求体的 stub
         String createStubJson = """
@@ -111,7 +102,7 @@ class RequestBodyMatchingTest {
     @Test
     @DisplayName("P1场景14: JSON请求体部分匹配")
     void testJsonBodyPartialMatch() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建部分匹配JSON的 stub
         String createStubJson = """
@@ -168,7 +159,7 @@ class RequestBodyMatchingTest {
     @Test
     @DisplayName("P1场景15: 请求体包含字符串匹配")
     void testBodyContainsString() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建包含特定字符串的 stub
         String createStubJson = """
@@ -225,7 +216,7 @@ class RequestBodyMatchingTest {
     @Test
     @DisplayName("P1场景16: 请求体正则表达式匹配")
     void testBodyRegexMatch() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建使用正则表达式匹配的 stub
         String createStubJson = """

@@ -24,18 +24,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试系统在并发请求下的行为和稳定性
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_concurrent",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_concurrent",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -65,7 +56,7 @@ class ConcurrencyTest {
     @Test
     @DisplayName("P2场景1: 并发创建多个stubs")
     void testConcurrentStubCreation() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         int concurrentRequests = 10;
         ExecutorService executorService = Executors.newFixedThreadPool(concurrentRequests);
@@ -139,7 +130,7 @@ class ConcurrencyTest {
     @Test
     @DisplayName("P2场景2: 并发调用同一个stub")
     void testConcurrentCallsToSameStub() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 先创建一个 stub
         String createStubJson = """
@@ -207,7 +198,7 @@ class ConcurrencyTest {
     @Test
     @DisplayName("P2场景3: 并发创建和调用stubs")
     void testConcurrentCreateAndCall() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         int operations = 20;
         ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -243,8 +234,7 @@ class ConcurrencyTest {
                         if (response.statusCode() == 201) {
                             createSuccess.incrementAndGet();
 
-                            // 创建后立即调用
-                            Thread.sleep(100); // 短暂等待确保stub生效
+                            // 创建后立即调用（WireMock 刷新是同步的，无需等待）
                             HttpRequest callRequest = HttpRequest.newBuilder()
                                     .uri(URI.create("http://localhost:" + port + "/api/mixed/" + index))
                                     .GET()
@@ -276,7 +266,7 @@ class ConcurrencyTest {
     @Test
     @DisplayName("P2场景4: 并发更新和删除stubs")
     void testConcurrentUpdateAndDelete() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 先创建一些 stubs
         List<Long> stubIds = new ArrayList<>();

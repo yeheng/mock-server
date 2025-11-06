@@ -24,18 +24,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 3. 测试静态资源过滤
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_filter",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_filter",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -67,7 +58,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景7: /admin/health 应该由Spring MVC处理")
     void testAdminHealthRoutesToSpringMVC() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/admin/health"))
@@ -85,7 +76,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景8: /admin/wiremock 应该由Spring MVC处理")
     void testAdminWireMockRoutesToSpringMVC() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/admin/wiremock/status"))
@@ -101,7 +92,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景9: /api/ 路径应该由WireMock处理，没有stub时返回404")
     void testApiPathRoutesToWireMock() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         // 多个不同的 /api/ 路径都应该被 WireMock 处理
         String[] paths = {
@@ -130,7 +121,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景10: /actuator/ 路径应该由Spring MVC处理（如果Actuator已启用）")
     void testActuatorRoutesToSpringMVC() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/actuator"))
@@ -157,7 +148,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景11: PUT 请求应该被正确匹配和处理")
     void testPutRequestMatching() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         // 步骤1: 创建 PUT stub
         String createStubJson = """
@@ -206,7 +197,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景12: DELETE 请求应该被正确匹配和处理")
     void testDeleteRequestMatching() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         // 步骤1: 创建 DELETE stub
         String createStubJson = """
@@ -247,7 +238,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景13: 不同HTTP方法应该匹配不同的stub")
     void testDifferentMethodsMatchDifferentStubs() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         // 步骤1: 为同一URL创建多个不同方法的 stub
         String getStubJson = """
@@ -345,7 +336,7 @@ class FilterRoutingAndMethodsTest {
     @Test
     @DisplayName("TDD场景14: 禁用的stub不应该被匹配")
     void testDisabledStubNotMatched() throws Exception {
-        Thread.sleep(1000);
+        // WireMock 刷新是同步的，无需等待
 
         // 步骤1: 创建禁用的 stub
         String createStubJson = """

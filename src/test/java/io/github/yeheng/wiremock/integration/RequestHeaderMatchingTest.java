@@ -20,18 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试基于 HTTP 请求头的匹配功能
  */
 @SpringBootTest(classes = WiremockUiApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "spring.datasource.url=jdbc:h2:mem:testdb_headers",
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.h2.console.enabled=false",
-                "spring.jpa.show-sql=false",
-                "wiremock.integrated-mode=true"
-        })
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.datasource.url=jdbc:h2:mem:testdb_headers",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.h2.console.enabled=false",
         "spring.jpa.show-sql=false",
@@ -61,7 +52,7 @@ class RequestHeaderMatchingTest {
     @Test
     @DisplayName("P1场景5: Authorization 请求头匹配")
     void testAuthorizationHeaderMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要特定 Authorization 头的 stub
         String createStubJson = """
@@ -120,7 +111,7 @@ class RequestHeaderMatchingTest {
     @Test
     @DisplayName("P1场景6: Content-Type 请求头匹配")
     void testContentTypeHeaderMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建只接受 JSON 的 stub
         String createStubJson = """
@@ -169,7 +160,7 @@ class RequestHeaderMatchingTest {
     @Test
     @DisplayName("P1场景7: 自定义请求头匹配")
     void testCustomHeaderMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要自定义头的 stub
         String createStubJson = """
@@ -219,7 +210,7 @@ class RequestHeaderMatchingTest {
     @Test
     @DisplayName("P1场景8: 多个请求头组合匹配")
     void testMultipleHeadersMatching() throws Exception {
-        Thread.sleep(2000);
+        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
         // 创建需要多个请求头的 stub
         String createStubJson = """

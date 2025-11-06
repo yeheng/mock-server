@@ -2,8 +2,24 @@ server:
   port: 8080
   servlet:
     context-path: /
+  # Undertow 性能配置
+  undertow:
+    threads:
+      # IO线程数 = CPU核心数
+      io: 4
+      # 工作线程数交给Virtual Threads管理，不设置上限
+      worker: 200
+    # 缓冲区配置（减少内存分配）
+    buffer-size: 16384
+    direct-buffers: true
+    # 请求限制
+    max-http-post-size: 10MB
 
 spring:
+  # 启用Virtual Threads (Java 21)
+  threads:
+    virtual:
+      enabled: true
   application:
     name: wiremock-ui-manager
 

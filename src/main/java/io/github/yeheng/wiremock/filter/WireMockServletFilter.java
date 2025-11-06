@@ -38,22 +38,22 @@ public class WireMockServletFilter implements Filter {
         String requestURI = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
-        // 仅将 /api/** 代理给 WireMock，其余请求交由 Spring 处理（包括静态资源与管理接口）
-        if (isWireMockApi(requestURI) || isWireMockAdminRequest(requestURI)) {
-            try {
-                wireMockManager.handleRequest(httpRequest, httpResponse);
-            } catch (Exception e) {
-                log.error("处理 WireMock 请求时出错: {} {}", method, requestURI, e);
-                if (!httpResponse.isCommitted()) {
-                    httpResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    httpResponse.getWriter().write("WireMock 处理错误: " + e.getMessage());
-                }
-            }
+        // 如果是管理API、静态资源或WireMock管理请求，交给Spring处理
+        if (isAdminApi(requestURI) || isStaticResource(requestURI) || isWireMockAdminRequest(requestURI)) {
+            chain.doFilter(request, response);
             return;
         }
 
-        // 其余请求（静态资源、管理端点、页面路由）放行给 Spring MVC/静态资源处理
-        chain.doFilter(request, response);
+        // 其余所有请求（包括根路径、/api/**、任意路径）交给WireMock处理
+        try {
+            wireMockManager.handleRequest(httpRequest, httpResponse);
+        } catch (Exception e) {
+            log.error("处理 WireMock 请求时出错: {} {}", method, requestURI, e);
+            if (!httpResponse.isCommitted()) {
+                httpResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                httpResponse.getWriter().write("WireMock 处理错误: " + e.getMessage());
+            }
+        }
     }
     
     /**
@@ -76,18 +76,18 @@ public class WireMockServletFilter implements Filter {
     
     /**
      * 判断是否为管理 API 请求（Spring Boot 应用自己的 API）
-     * 管理API使用 /admin/ 前缀，其他路径交给 WireMock 处理
+     * 管理API使用 /admin/ 前缀，交给 Spring MVC 处理
      */
-    private boolean isWireMockApi(String requestURI) {
-        // 只有 /api/** 交给 WireMock 处理
-        return requestURI.startsWith("/api/");
+    private boolean isAdminApi(String requestURI) {
+        return requestURI.startsWith("/admin/stubs") ||
+               requestURI.startsWith("/admin/health") ||
+               requestURI.startsWith("/admin/wiremock");
     }
-    
+
     /**
-     * 判断是否为 WireMock 管理请求
+     * 判断是否为 WireMock 管理请求（交给 Spring 处理）
      */
     private boolean isWireMockAdminRequest(String requestURI) {
-        // 保留判断以便未来需要，但当前由 Spring 处理，不代理
         return requestURI.startsWith("/__admin/") ||
                requestURI.startsWith("/mappings/") ||
                requestURI.startsWith("/files/");
