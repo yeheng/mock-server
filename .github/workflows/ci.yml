@@ -86,22 +86,8 @@ jobs:
 
       - name: 构建 Docker 镜像
         run: |
-          # 创建 Dockerfile
-          cat > Dockerfile <<EOF
-          FROM eclipse-temurin:21-jre-alpine
-
-          WORKDIR /app
-
-          COPY target/wiremock-ui-*.jar app.jar
-
-          EXPOSE 8080
-
-          ENV SPRING_PROFILES_ACTIVE=prod
-
-          ENTRYPOINT ["java", "-jar", "/app/app.jar"]
-          EOF
-
-          # 构建镜像
+          # 使用项目根目录的多阶段构建 Dockerfile
+          # Docker 会在容器内部完成所有的编译工作（前端+后端）
           docker build -t ghcr.io/${{ github.repository_owner }}/wiremock-ui:latest .
 
       - name: 登录到 GitHub Container Registry

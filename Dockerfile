@@ -1,11 +1,35 @@
-# 使用 Eclipse Temurin 作为基础镜像
-# 这是一个轻量级的 OpenJDK 发行版，特别适合生产环境
-FROM eclipse-temurin:21-jre-alpine
+# ================================
+# 构建阶段 - 编译 Java 代码和构建前端资源
+# ================================
+FROM eclipse-temurin:21-jdk-alpine AS builder
 
 # 设置维护者信息
-LABEL maintainer="your-email@example.com"
+LABEL maintainer="hengheng8848@gmail.com"
+LABEL description="WireMock UI Manager - Spring Boot Application (Builder Stage)"
+LABEL version="1.0.0"
+
+# 安装必要的构建工具
+RUN apk add --no-cache curl
+
+# 设置工作目录
+WORKDIR /build
+
+# 构建应用
+# 使用 Maven 构建整个项目，包括前端资源
+RUN mvn clean package -DskipTests
+
+# ================================
+# 运行阶段 - 创建最终的生产镜像
+# ================================
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+# 设置维护者信息
+LABEL maintainer="hengheng8848@gmail.com"
 LABEL description="WireMock UI Manager - Spring Boot Application"
 LABEL version="1.0.0"
+
+# 安装 curl 用于健康检查
+RUN apk add --no-cache curl
 
 # 创建应用用户
 # 使用非 root 用户运行应用是一个重要的安全最佳实践
@@ -15,9 +39,8 @@ RUN addgroup -g 1000 -S appgroup && \
 # 设置工作目录
 WORKDIR /app
 
-# 复制 JAR 文件
-# 我们使用通配符来匹配 JAR 文件名
-COPY target/wiremock-*.jar app.jar
+# 从构建阶段复制 JAR 文件
+COPY --from=builder /build/target/wiremock-ui.jar app.jar
 
 # 创建日志目录
 RUN mkdir -p /app/logs && \
@@ -38,7 +61,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # 环境变量配置
 # 这些变量可以被覆盖以适应不同的部署环境
 ENV SPRING_PROFILES_ACTIVE=prod
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC"
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC"
 
 # 启动命令
 # 我们使用 exec 形式来确保信号正确传递
