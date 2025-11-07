@@ -1,27 +1,18 @@
 package io.github.yeheng.wiremock.controller;
 
-import java.util.List;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import io.github.yeheng.wiremock.entity.StubMapping;
 import io.github.yeheng.wiremock.service.StubMappingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * StubMapping REST API 控制器
@@ -35,20 +26,31 @@ public class StubMappingController {
 
     private final StubMappingService stubMappingService;
 
+    private <T> ResponseEntity<T> handleException(Supplier<ResponseEntity<T>> operation) {
+        try {
+            return operation.get();
+        } catch (IllegalArgumentException e) {
+            // 资源不存在返回404，其他参数错误返回400
+            return e.getMessage() != null && e.getMessage().contains("不存在")
+                    ? ResponseEntity.notFound().build()
+                    : ResponseEntity.badRequest().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (Exception e) {
+            log.error("操作失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     /**
      * 创建新的 Stub
      */
     @PostMapping
     public ResponseEntity<StubMapping> createStub(@Valid @RequestBody StubMapping stub) {
-        try {
+        return handleException(() -> {
             StubMapping createdStub = stubMappingService.createStub(stub);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdStub);
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
-        } catch (Exception e) {
-            log.error("创建 Stub 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -56,13 +58,10 @@ public class StubMappingController {
      */
     @GetMapping
     public ResponseEntity<List<StubMapping>> getAllStubs() {
-        try {
+        return handleException(() -> {
             List<StubMapping> stubs = stubMappingService.getAllStubs();
             return ResponseEntity.ok(stubs);
-        } catch (Exception e) {
-            log.error("获取 Stubs 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -70,13 +69,10 @@ public class StubMappingController {
      */
     @GetMapping("/page")
     public ResponseEntity<Page<StubMapping>> getAllStubs(Pageable pageable) {
-        try {
+        return handleException(() -> {
             Page<StubMapping> stubs = stubMappingService.getAllStubs(pageable);
             return ResponseEntity.ok(stubs);
-        } catch (Exception e) {
-            log.error("分页获取 Stubs 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -84,13 +80,10 @@ public class StubMappingController {
      */
     @GetMapping("/search")
     public ResponseEntity<List<StubMapping>> searchStubs(@RequestParam String keyword) {
-        try {
+        return handleException(() -> {
             List<StubMapping> stubs = stubMappingService.searchStubs(keyword);
             return ResponseEntity.ok(stubs);
-        } catch (Exception e) {
-            log.error("搜索 Stubs 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -109,15 +102,10 @@ public class StubMappingController {
     @PutMapping("/{stubId}")
     public ResponseEntity<StubMapping> updateStub(@PathVariable Long stubId,
                                                   @Valid @RequestBody StubMapping updatedStub) {
-        try {
+        return handleException(() -> {
             StubMapping stub = stubMappingService.updateStub(stubId, updatedStub);
             return ResponseEntity.ok(stub);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("更新 Stub 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -125,15 +113,10 @@ public class StubMappingController {
      */
     @DeleteMapping("/{stubId}")
     public ResponseEntity<Void> deleteStub(@PathVariable Long stubId) {
-        try {
+        return handleException(() -> {
             stubMappingService.deleteStub(stubId);
             return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("删除 Stub 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -141,15 +124,10 @@ public class StubMappingController {
      */
     @PostMapping("/{stubId}/toggle")
     public ResponseEntity<StubMapping> toggleStubEnabled(@PathVariable Long stubId) {
-        try {
+        return handleException(() -> {
             StubMapping stub = stubMappingService.toggleStubEnabled(stubId);
             return ResponseEntity.ok(stub);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("切换 Stub 状态失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -157,13 +135,10 @@ public class StubMappingController {
      */
     @PostMapping("/reload")
     public ResponseEntity<Void> reloadAllStubs() {
-        try {
+        return handleException(() -> {
             stubMappingService.reloadAllStubs();
             return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.error("重新加载 stubs 失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 
     /**
@@ -171,12 +146,9 @@ public class StubMappingController {
      */
     @GetMapping("/statistics")
     public ResponseEntity<StubMappingService.StubStatistics> getStatistics() {
-        try {
+        return handleException(() -> {
             StubMappingService.StubStatistics stats = stubMappingService.getStatistics();
             return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            log.error("获取统计信息失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        });
     }
 }

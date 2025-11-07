@@ -43,7 +43,7 @@ public class RequestConverter {
     }
 
     private HttpHeaders buildHttpHeaders(HttpServletRequest request) {
-        java.util.List<HttpHeader> headers = new java.util.ArrayList<>();
+        var headers = new java.util.ArrayList<HttpHeader>(32);
 
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -53,11 +53,8 @@ public class RequestConverter {
                 continue;
             }
 
-            java.util.List<String> values = new java.util.ArrayList<>();
-            while (headerValues.hasMoreElements()) {
-                values.add(headerValues.nextElement());
-            }
-
+            // 使用Collections.list转换Enumeration，避免手动循环
+            var values = java.util.Collections.list(headerValues);
             headers.add(new HttpHeader(headerName, values));
         }
 

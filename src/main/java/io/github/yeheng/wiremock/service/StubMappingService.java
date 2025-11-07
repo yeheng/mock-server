@@ -34,12 +34,7 @@ public class StubMappingService {
     public StubMapping createStub(StubMapping stub) {
         log.info("创建新的 Stub: {}", stub.getName());
 
-        // 验证WireMock服务器状态
-        if (!wireMockManager.isRunning()) {
-            throw new IllegalStateException("WireMock服务器未运行");
-        }
-
-        // 验证请求和响应定义
+        ensureRunning();
         validateStubMapping(stub);
 
         StubMapping savedStub = stubMappingRepository.save(stub);
@@ -97,15 +92,11 @@ public class StubMappingService {
         StubMapping existingStub = stubMappingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Stub 不存在: ID=" + id));
 
-        // 验证WireMock服务器状态
-        if (!wireMockManager.isRunning()) {
-            throw new IllegalStateException("WireMock服务器未运行");
-        }
+        ensureRunning();
 
         updatedStub.setId(id);
         updatedStub.setUuid(existingStub.getUuid()); // 保持 UUID 不变
 
-        // 验证请求和响应定义
         validateStubMapping(updatedStub);
 
         StubMapping savedStub = stubMappingRepository.save(updatedStub);
@@ -223,6 +214,12 @@ public class StubMappingService {
         // 对请求体匹配规则保持宽松策略：作为字符串存储与使用
         // 一些测试或用户可能提供非标准但可解析的匹配表达式（例如额外的括号），
         // 不应在创建阶段拒绝。真正的解析与匹配在请求到来时由 WireMockManager 处理。
+    }
+
+    private void ensureRunning() {
+        if (!wireMockManager.isRunning()) {
+            throw new IllegalStateException("WireMock服务器未运行");
+        }
     }
 
     /**

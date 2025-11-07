@@ -23,12 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 public class StubMappingConverter {
     private final ObjectMapper objectMapper;
     public MappingBuilder convert(StubMapping stub) {
-        MappingBuilder builder = buildBaseRequest(stub);
-        builder = setUuid(builder, stub);
-        builder = addHeaderMatching(builder, stub);
-        builder = addQueryParamMatching(builder, stub);
-        builder = addBodyMatching(builder, stub);
-        builder = setResponse(builder, stub);
+        var builder = buildBaseRequest(stub);
+        setUuid(builder, stub);
+        addHeaderMatching(builder, stub);
+        addQueryParamMatching(builder, stub);
+        addBodyMatching(builder, stub);
+        setResponse(builder, stub);
         return builder;
     }
 
@@ -65,21 +65,21 @@ public class StubMappingConverter {
         }
     }
 
-    private MappingBuilder setUuid(MappingBuilder builder, StubMapping stub) {
+    private void setUuid(MappingBuilder builder, StubMapping stub) {
         String uuid = stub.getUuid();
         if (uuid != null && !uuid.trim().isEmpty()) {
             try {
-                builder = builder.withId(java.util.UUID.fromString(uuid));
-            } catch (IllegalArgumentException ignore) {
+                builder.withId(java.util.UUID.fromString(uuid));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid UUID format: {}", uuid);
             }
         }
-        return builder;
     }
 
-    private MappingBuilder addHeaderMatching(MappingBuilder builder, StubMapping stub) {
+    private void addHeaderMatching(MappingBuilder builder, StubMapping stub) {
         String headersPattern = stub.getRequestHeadersPattern();
         if (headersPattern == null || headersPattern.trim().isEmpty()) {
-            return builder;
+            return;
         }
 
         try {
@@ -91,23 +91,22 @@ public class StubMappingConverter {
                 JsonNode rule = entry.getValue();
 
                 if (rule.has("equalTo")) {
-                    builder = builder.withHeader(name, WireMock.equalTo(rule.get("equalTo").asText()));
+                    builder.withHeader(name, WireMock.equalTo(rule.get("equalTo").asText()));
                 } else if (rule.has("contains")) {
-                    builder = builder.withHeader(name, WireMock.containing(rule.get("contains").asText()));
+                    builder.withHeader(name, WireMock.containing(rule.get("contains").asText()));
                 } else if (rule.has("matches")) {
-                    builder = builder.withHeader(name, WireMock.matching(rule.get("matches").asText()));
+                    builder.withHeader(name, WireMock.matching(rule.get("matches").asText()));
                 }
             }
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            log.warn("Invalid header pattern: {}", e.getMessage());
         }
-
-        return builder;
     }
 
-    private MappingBuilder addQueryParamMatching(MappingBuilder builder, StubMapping stub) {
+    private void addQueryParamMatching(MappingBuilder builder, StubMapping stub) {
         String queryParamsPattern = stub.getQueryParametersPattern();
         if (queryParamsPattern == null || queryParamsPattern.trim().isEmpty()) {
-            return builder;
+            return;
         }
 
         try {
@@ -119,67 +118,70 @@ public class StubMappingConverter {
                 JsonNode rule = entry.getValue();
 
                 if (rule.has("equalTo")) {
-                    builder = builder.withQueryParam(name, WireMock.equalTo(rule.get("equalTo").asText()));
+                    builder.withQueryParam(name, WireMock.equalTo(rule.get("equalTo").asText()));
                 } else if (rule.has("contains")) {
-                    builder = builder.withQueryParam(name, WireMock.containing(rule.get("contains").asText()));
+                    builder.withQueryParam(name, WireMock.containing(rule.get("contains").asText()));
                 } else if (rule.has("matches")) {
-                    builder = builder.withQueryParam(name, WireMock.matching(rule.get("matches").asText()));
+                    builder.withQueryParam(name, WireMock.matching(rule.get("matches").asText()));
                 }
             }
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            log.warn("Invalid query param pattern: {}", e.getMessage());
         }
-
-        return builder;
     }
 
-    private MappingBuilder addBodyMatching(MappingBuilder builder, StubMapping stub) {
+    private void addBodyMatching(MappingBuilder builder, StubMapping stub) {
         String bodyPattern = stub.getRequestBodyPattern();
         if (bodyPattern == null || bodyPattern.trim().isEmpty()) {
-            return builder;
+            return;
         }
 
         try {
             JsonNode bodyRule = objectMapper.readTree(bodyPattern);
             if (bodyRule.has("equalToJson")) {
-                builder = builder
-                        .withRequestBody(new EqualToJsonPattern(bodyRule.get("equalToJson").asText(), true, true));
+                builder.withRequestBody(new EqualToJsonPattern(bodyRule.get("equalToJson").asText(), true, true));
             } else if (bodyRule.has("matchesJsonPath")) {
-                builder = builder
-                        .withRequestBody(WireMock.matchingJsonPath(bodyRule.get("matchesJsonPath").asText()));
+                builder.withRequestBody(WireMock.matchingJsonPath(bodyRule.get("matchesJsonPath").asText()));
             } else if (bodyRule.has("contains")) {
                 String containsText = bodyRule.get("contains").asText();
-                builder = builder.withRequestBody(WireMock.containing(containsText));
+                builder.withRequestBody(WireMock.containing(containsText));
             } else if (bodyRule.has("matches")) {
                 String regex = bodyRule.get("matches").asText();
-                builder = builder.withRequestBody(WireMock.matching(regex));
+                builder.withRequestBody(WireMock.matching(regex));
             }
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
-            try {
-                String fixedPattern = bodyPattern.replace("\\", "\\\\");
-                JsonNode bodyRule = objectMapper.readTree(fixedPattern);
-                if (bodyRule.has("matches")) {
-                    String regex = bodyRule.get("matches").asText();
-                    builder = builder.withRequestBody(WireMock.matching(regex));
-                } else if (bodyRule.has("contains")) {
-                    builder = builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
-                }
-            } catch (Exception ex) {
-                builder = builder.withRequestBody(WireMock.containing(bodyPattern));
-            }
+            tryFallbackBodyMatching(builder, bodyPattern);
         } catch (Exception e) {
-            builder = builder.withRequestBody(WireMock.containing(bodyPattern));
+            log.warn("Invalid body pattern: {}", e.getMessage());
+            builder.withRequestBody(WireMock.containing(bodyPattern));
         }
-
-        return builder;
     }
 
-    private MappingBuilder setResponse(MappingBuilder builder, StubMapping stub) {
+    private void tryFallbackBodyMatching(MappingBuilder builder, String bodyPattern) {
+        try {
+            String fixedPattern = bodyPattern.replace("\\", "\\\\");
+            JsonNode bodyRule = objectMapper.readTree(fixedPattern);
+            if (bodyRule.has("matches")) {
+                String regex = bodyRule.get("matches").asText();
+                builder.withRequestBody(WireMock.matching(regex));
+            } else if (bodyRule.has("contains")) {
+                builder.withRequestBody(WireMock.containing(bodyRule.get("contains").asText()));
+            } else {
+                builder.withRequestBody(WireMock.containing(bodyPattern));
+            }
+        } catch (Exception e) {
+            log.warn("Fallback body pattern parsing failed: {}", e.getMessage());
+            builder.withRequestBody(WireMock.containing(bodyPattern));
+        }
+    }
+
+    private void setResponse(MappingBuilder builder, StubMapping stub) {
         String responseBody = stub.getResponseDefinition();
         if (responseBody == null || responseBody.trim().isEmpty()) {
             responseBody = createDefaultResponse(stub);
         }
 
-        return builder.willReturn(
+        builder.willReturn(
                 WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json;charset=UTF-8")

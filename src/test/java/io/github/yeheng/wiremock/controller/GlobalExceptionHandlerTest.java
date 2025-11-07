@@ -2,7 +2,8 @@ package io.github.yeheng.wiremock.controller;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,13 +22,13 @@ class GlobalExceptionHandlerTest {
         IllegalArgumentException ex = new IllegalArgumentException("参数错误");
 
         // 执行
-        var result = exceptionHandler.handleIllegalArgumentException(ex);
+        Map<String, Object> result = exceptionHandler.handleIllegalArgumentException(ex);
 
         // 验证
         assertNotNull(result);
-        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertNotNull(result.getBody());
-        assertEquals("参数错误", result.getBody().get("message"));
+        assertEquals("参数错误", result.get("message"));
+        assertEquals("参数错误", result.get("error"));
+        assertNotNull(result.get("timestamp"));
     }
 
     @Test
@@ -37,12 +38,28 @@ class GlobalExceptionHandlerTest {
         IllegalStateException ex = new IllegalStateException("状态错误");
 
         // 执行
-        var result = exceptionHandler.handleIllegalStateException(ex);
+        Map<String, Object> result = exceptionHandler.handleIllegalStateException(ex);
 
         // 验证
         assertNotNull(result);
-        assertEquals(HttpStatus.CONFLICT, result.getStatusCode());
-        assertNotNull(result.getBody());
-        assertEquals("状态错误", result.getBody().get("message"));
+        assertEquals("状态错误", result.get("message"));
+        assertEquals("状态错误", result.get("error"));
+        assertNotNull(result.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("测试 handleGenericException - 处理通用异常")
+    void testHandleGenericException() {
+        // 准备
+        Exception ex = new RuntimeException("系统错误");
+
+        // 执行
+        Map<String, Object> result = exceptionHandler.handleGenericException(ex);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals("系统内部错误，请稍后重试", result.get("message"));
+        assertEquals("系统异常", result.get("error"));
+        assertNotNull(result.get("timestamp"));
     }
 }

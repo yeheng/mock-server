@@ -1,6 +1,7 @@
 package io.github.yeheng.wiremock.filter;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Order(1) // 高优先级
 public class WireMockServletFilter implements Filter {
+
+    private static final Pattern STATIC_RESOURCE_PATTERN = Pattern.compile(
+        ".*\\.(css|js|png|jpg|jpeg|gif|ico|html|woff|woff2|ttf|eot|svg)$"
+    );
 
     private final WireMockManager wireMockManager;
     
@@ -63,15 +68,7 @@ public class WireMockServletFilter implements Filter {
         return requestURI.startsWith("/static/") ||
                requestURI.startsWith("/webjars/") ||
                requestURI.startsWith("/h2-console/") ||
-               requestURI.contains(".css") ||
-               requestURI.contains(".js") ||
-               requestURI.contains(".png") ||
-               requestURI.contains(".jpg") ||
-               requestURI.contains(".jpeg") ||
-               requestURI.contains(".ico") ||
-               requestURI.contains(".html") ||
-               requestURI.contains(".gif") ||
-               requestURI.endsWith(".ico");
+               STATIC_RESOURCE_PATTERN.matcher(requestURI).matches();
     }
     
     /**
