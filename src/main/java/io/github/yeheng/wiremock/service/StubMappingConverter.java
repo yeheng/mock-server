@@ -45,13 +45,13 @@ public class StubMappingConverter {
         return switch (stub.getUrlMatchType()) {
             case EQUALS -> WireMock.urlPathEqualTo(url);
             case CONTAINS -> {
-                String escaped = url.replaceAll("[.*+?^${}()|\\\\]", "\\\\$&");
-                yield WireMock.urlMatching(".*" + escaped + ".*");
+                String escaped = RegexCache.escapeRegex(url);
+                yield WireMock.urlMatching(RegexCache.getPattern(".*" + escaped + ".*").pattern());
             }
-            case REGEX -> WireMock.urlMatching(url);
+            case REGEX -> WireMock.urlMatching(RegexCache.getPattern(url).pattern());
             case PATH_TEMPLATE -> {
-                String regex = url.replaceAll("\\{[^}]+}", "[^/]+");
-                yield WireMock.urlPathMatching("^" + regex + "$");
+                String regex = RegexCache.convertPathTemplateToRegex(url);
+                yield WireMock.urlPathMatching(RegexCache.getPattern("^" + regex + "$").pattern());
             }
         };
     }
