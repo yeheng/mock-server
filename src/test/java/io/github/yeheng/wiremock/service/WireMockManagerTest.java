@@ -38,9 +38,6 @@ class WireMockManagerTest {
     @Mock(lenient = true)
     private StubMappingConverter stubMappingConverter;
 
-    @Mock(lenient = true)
-    private PerformanceMonitor performanceMonitor;
-
     @InjectMocks
     private WireMockManager wireMockManager;
 
