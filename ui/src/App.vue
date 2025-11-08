@@ -1,32 +1,27 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import StubDashboard from '@/components/StubDashboard.vue'
-import StubList from '@/components/StubList.vue'
-import StubForm from '@/components/StubForm.vue'
+import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import StubDetails from '@/components/StubDetails.vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 const stubsStore = useStubsStore()
-const currentView = ref('dashboard') // 'dashboard', 'list', 'form', 'details'
 const editingStub = ref(null)
 const viewingStub = ref(null)
-const showForm = ref(false)
 const showDetails = ref(false)
+const route = useRoute()
+const router = useRouter()
 
 // 导航菜单
 const navigationItems = [
-  { id: 'dashboard', label: '仪表板', icon: '📊', description: '概览和统计' },
-  { id: 'list', label: 'Stub 列表', icon: '📋', description: '管理所有 stub' },
-  { id: 'create', label: '创建 Stub', icon: '➕', description: '新建 stub 映射' }
+  { id: 'dashboard', label: '仪表板', icon: '📊', description: '概览和统计', to: '/' },
+  { id: 'list', label: 'Stub 列表', icon: '📋', description: '管理所有 stub', to: '/stubs' },
+  { id: 'create', label: '创建 Stub', icon: '➕', description: '新建 stub 映射', to: '/stubs/create' }
 ]
 
 // 当前页面标题
-const pageTitle = computed(() => {
-  const item = navigationItems.find(item => item.id === currentView.value)
-  return item ? item.label : 'WireMock UI'
-})
+const pageTitle = computed(() => route.meta?.title || 'WireMock UI')
 
 // 初始化
 onMounted(() => {
@@ -34,55 +29,42 @@ onMounted(() => {
 })
 
 // 导航到页面
-const navigateTo = (viewId) => {
-  currentView.value = viewId
-  if (viewId === 'create') {
-    editingStub.value = null
-    showForm.value = true
-  }
+const navigateTo = (to) => {
+  router.push(to)
 }
 
 // 创建新 stub
 const handleCreateStub = () => {
   editingStub.value = null
-  showForm.value = true
-  currentView.value = 'form'
+  router.push('/stubs/create')
 }
 
 // 编辑 stub
 const handleEditStub = (stub) => {
   editingStub.value = stub
-  showForm.value = true
-  currentView.value = 'form'
+  router.push('/stubs/create')
 }
 
 // 查看 stub 详情
 const handleViewStub = (stub) => {
   viewingStub.value = stub
   showDetails.value = true
-  currentView.value = 'details'
 }
 
 // 表单保存成功
 const handleFormSaved = () => {
-  showForm.value = false
   editingStub.value = null
-  // 根据保存的内容决定返回哪个页面
-  currentView.value = 'list'
 }
 
 // 表单取消
 const handleFormClose = () => {
-  showForm.value = false
   editingStub.value = null
-  currentView.value = 'dashboard'
 }
 
 // 详情关闭
 const handleDetailsClose = () => {
   showDetails.value = false
   viewingStub.value = null
-  currentView.value = 'list'
 }
 
 // 详情编辑
@@ -134,16 +116,11 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
       <aside class="w-64 border-r bg-white h-[calc(100vh-4rem)]">
         <nav class="p-4">
           <div class="space-y-2">
-            <div 
-              v-for="item in navigationItems" 
+            <RouterLink
+              v-for="item in navigationItems"
               :key="item.id"
-              class="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-colors"
-              :class="[
-                currentView === item.id 
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                  : 'hover:bg-gray-50'
-              ]"
-              @click="navigateTo(item.id)"
+              :to="item.to"
+              class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors hover:bg-gray-50"
             >
               <span class="text-lg">{{ item.icon }}</span>
               <div>
@@ -152,7 +129,7 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
                   {{ item.description }}
                 </div>
               </div>
-            </div>
+            </RouterLink>
           </div>
 
           <!-- 快速统计 -->
@@ -188,35 +165,28 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
           <p class="text-muted-foreground mt-1">
             欢迎使用 WireMock stub 管理界面
           </p>
+          <!-- 面包屑导航 -->
+          <nav class="text-sm text-muted-foreground mt-2">
+            <ol class="flex items-center space-x-2">
+              <li>
+                <RouterLink to="/" class="hover:underline">首页</RouterLink>
+              </li>
+              <li v-for="m in route.matched" :key="m.path" class="flex items-center space-x-2">
+                <span>›</span>
+                <span>{{ m.meta?.title }}</span>
+              </li>
+            </ol>
+          </nav>
         </div>
 
-        <!-- 页面内容 -->
-        <div v-if="currentView === 'dashboard'">
-          <StubDashboard 
-            @create-stub="handleCreateStub"
-            @view-stub="handleViewStub"
-            @edit-stub="handleEditStub"
-            @view-all="currentView = 'list'"
-          />
-        </div>
-
-        <div v-else-if="currentView === 'list'">
-          <StubList 
-            @create="handleCreateStub"
-            @edit="handleEditStub"
-            @view-details="handleViewStub"
-          />
-        </div>
+        <!-- 路由页面内容 -->
+        <RouterView 
+          @create-stub="handleCreateStub"
+          @view-stub="handleViewStub"
+          @edit-stub="handleEditStub"
+        />
       </main>
     </div>
-
-    <!-- Stub 创建/编辑表单 -->
-    <StubForm
-      :stub="editingStub"
-      :show="showForm"
-      @close="handleFormClose"
-      @saved="handleFormSaved"
-    />
 
     <!-- Stub 详情查看 -->
     <StubDetails

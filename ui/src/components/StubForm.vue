@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, Tab, TabPanel } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog } from '@/components/ui/dialog'
+import { useRouter } from 'vue-router'
 
 const emit = defineEmits(['close', 'saved'])
 
@@ -14,12 +14,10 @@ const props = defineProps({
   stub: {
     type: Object,
     default: null
-  },
-  show: {
-    type: Boolean,
-    default: false
   }
 })
+
+const router = useRouter()
 
 const stubsStore = useStubsStore()
 const isLoading = ref(false)
@@ -80,8 +78,8 @@ onMounted(() => {
   }
 })
 
-// 重置表单
-const resetForm = () => {
+// 重置表单（使用函数声明以避免在watch的immediate阶段引用未初始化）
+function resetForm() {
   form.value = {
     id: null,
     name: '',
@@ -143,7 +141,8 @@ const handleSave = async () => {
       await stubsStore.createStub(form.value)
     }
     emit('saved')
-    handleClose()
+    // 保存后返回列表页
+    router.push('/stubs')
   } catch (error) {
     console.error('Failed to save stub:', error)
     // 可以在此处添加错误提示
@@ -156,6 +155,7 @@ const handleSave = async () => {
 const handleClose = () => {
   resetForm()
   emit('close')
+  router.back()
 }
 
 // 添加请求头
@@ -202,16 +202,16 @@ const removeResponseHeader = (key) => {
     delete form.value.response.headers[key]
   }
 }
-</script>
+ </script>
 
 <template>
-  <Dialog
-    :open="show"
-    :title="isEdit ? '编辑 Stub' : '创建新 Stub'"
-    @update:open="(open) => { if (!open) handleClose() }"
-  >
-    <div class="max-h-[80vh] overflow-y-auto pr-2">
-      <div class="space-y-6">
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">{{ isEdit ? '编辑 Stub' : '创建新 Stub' }}</h1>
+      <Button variant="outline" @click="handleClose">返回</Button>
+    </div>
+
+    <div class="space-y-6">
         <!-- 基本信息 -->
       <Card>
         <CardHeader>
@@ -510,17 +510,16 @@ const removeResponseHeader = (key) => {
           </Card>
         </TabPanel>
       </Tabs>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="flex justify-end space-x-2">
-        <Button variant="outline" @click="handleClose" :disabled="isLoading">
-          取消
-        </Button>
-        <Button @click="handleSave" :disabled="isLoading">
-          {{ isLoading ? '保存中...' : (isEdit ? '更新' : '创建') }}
-        </Button>
-      </div>
     </div>
-  </Dialog>
+
+    <!-- 操作按钮 -->
+    <div class="flex justify-end space-x-2">
+      <Button variant="outline" @click="handleClose" :disabled="isLoading">
+        取消
+      </Button>
+      <Button @click="handleSave" :disabled="isLoading">
+        {{ isLoading ? '保存中...' : (isEdit ? '更新' : '创建') }}
+      </Button>
+    </div>
+  </div>
 </template>

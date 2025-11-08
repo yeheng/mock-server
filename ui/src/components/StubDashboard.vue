@@ -83,37 +83,7 @@ const quickActions = ref([
   }
 ])
 
-// 最近的活动
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'create',
-    message: '创建了新的 stub "用户登录接口"',
-    timestamp: '2 分钟前',
-    user: 'admin'
-  },
-  {
-    id: 2,
-    type: 'update',
-    message: '更新了 stub "产品列表接口" 的响应数据',
-    timestamp: '15 分钟前',
-    user: 'admin'
-  },
-  {
-    id: 3,
-    type: 'delete',
-    message: '删除了 stub "测试接口"',
-    timestamp: '1 小时前',
-    user: 'admin'
-  },
-  {
-    id: 4,
-    type: 'toggle',
-    message: '启用了 stub "支付回调接口"',
-    timestamp: '2 小时前',
-    user: 'admin'
-  }
-])
+// 需求更新：移除最近活动模块
 
 // 初始化
 onMounted(async () => {
@@ -268,36 +238,7 @@ const getActivityColor = (type) => {
         </CardContent>
       </Card>
 
-      <!-- 最近活动 -->
-      <Card>
-        <CardHeader>
-          <CardTitle>最近活动</CardTitle>
-          <CardDescription>
-            系统中的最新操作记录
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div class="space-y-4">
-            <div 
-              v-for="activity in recentActivities" 
-              :key="activity.id"
-              class="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted transition-colors"
-            >
-              <span class="text-lg">{{ getActivityIcon(activity.type) }}</span>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm" :class="getActivityColor(activity.type)">
-                  {{ activity.message }}
-                </p>
-                <div class="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
-                  <span>{{ activity.user }}</span>
-                  <span>•</span>
-                  <span>{{ activity.timestamp }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
 
     <!-- 最近创建的 Stub -->

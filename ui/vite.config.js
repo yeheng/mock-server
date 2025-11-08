@@ -18,6 +18,11 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // 开发环境代理后端API，保持与生产一致的路径前缀
+      '/admin': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
   test: {
