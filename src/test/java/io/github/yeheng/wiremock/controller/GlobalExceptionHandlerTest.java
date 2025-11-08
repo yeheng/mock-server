@@ -1,5 +1,7 @@
 package io.github.yeheng.wiremock.controller;
 
+import io.github.yeheng.wiremock.exception.BusinessException;
+import io.github.yeheng.wiremock.exception.SystemException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +61,45 @@ class GlobalExceptionHandlerTest {
         // 验证
         assertNotNull(result);
         assertEquals("系统内部错误，请稍后重试", result.get("message"));
-        assertEquals("系统异常", result.get("error"));
+        assertEquals("UNEXPECTED_ERROR", result.get("errorCode"));
+        assertEquals("系统内部错误，请稍后重试", result.get("error"));
+        assertEquals(500, result.get("status"));
+        assertNotNull(result.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("测试 handleBusinessException - 处理业务异常")
+    void testHandleBusinessException() {
+        // 准备
+        BusinessException ex = new BusinessException("业务逻辑错误", "INVALID_OPERATION");
+
+        // 执行
+        Map<String, Object> result = exceptionHandler.handleBusinessException(ex);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals("业务逻辑错误", result.get("message"));
+        assertEquals("INVALID_OPERATION", result.get("errorCode"));
+        assertEquals("业务逻辑错误", result.get("error"));
+        assertEquals(400, result.get("status"));
+        assertNotNull(result.get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("测试 handleSystemException - 处理系统异常")
+    void testHandleSystemException() {
+        // 准备
+        SystemException ex = new SystemException("系统内部错误", "INTERNAL_ERROR");
+
+        // 执行
+        Map<String, Object> result = exceptionHandler.handleSystemException(ex);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals("系统内部错误", result.get("message"));
+        assertEquals("INTERNAL_ERROR", result.get("errorCode"));
+        assertEquals("系统内部错误", result.get("error"));
+        assertEquals(500, result.get("status"));
         assertNotNull(result.get("timestamp"));
     }
 }

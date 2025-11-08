@@ -14,6 +14,8 @@ import com.github.tomakehurst.wiremock.matching.EqualToJsonPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
 
 import io.github.yeheng.wiremock.entity.StubMapping;
+import io.github.yeheng.wiremock.exception.BusinessException;
+import io.github.yeheng.wiremock.exception.SystemException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -60,7 +62,11 @@ public class StubMappingConverter {
         try {
             String methodStr = stub.getMethod() != null ? stub.getMethod().toUpperCase() : "ANY";
             return RequestMethod.fromString(methodStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("无效的HTTP方法: {}, 使用ANY", stub.getMethod(), e);
+            return RequestMethod.ANY;
         } catch (Exception e) {
+            log.error("构建请求方法时发生未预期错误: {}", e.getMessage(), e);
             return RequestMethod.ANY;
         }
     }
@@ -98,8 +104,12 @@ public class StubMappingConverter {
                     builder.withHeader(name, WireMock.matching(rule.get("matches").asText()));
                 }
             }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("解析请求头模式JSON失败: {}", headersPattern, e);
+            throw new BusinessException("请求头匹配规则JSON格式无效", "INVALID_HEADER_PATTERN");
         } catch (Exception e) {
-            log.warn("Invalid header pattern: {}", e.getMessage());
+            log.error("处理请求头匹配时发生未预期错误: {}", e.getMessage(), e);
+            throw new SystemException("处理请求头匹配失败", "HEADER_PROCESSING_ERROR");
         }
     }
 
@@ -125,8 +135,12 @@ public class StubMappingConverter {
                     builder.withQueryParam(name, WireMock.matching(rule.get("matches").asText()));
                 }
             }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("解析查询参数模式JSON失败: {}", queryParamsPattern, e);
+            throw new BusinessException("查询参数匹配规则JSON格式无效", "INVALID_QUERY_PARAM_PATTERN");
         } catch (Exception e) {
-            log.warn("Invalid query param pattern: {}", e.getMessage());
+            log.error("处理查询参数匹配时发生未预期错误: {}", e.getMessage(), e);
+            throw new SystemException("处理查询参数匹配失败", "QUERY_PARAM_PROCESSING_ERROR");
         }
     }
 
@@ -150,10 +164,14 @@ public class StubMappingConverter {
                 builder.withRequestBody(WireMock.matching(regex));
             }
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
+            log.warn("请求体模式JSON格式错误，尝试降级处理: {}", bodyPattern, e);
             tryFallbackBodyMatching(builder, bodyPattern);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("解析请求体模式JSON失败: {}", bodyPattern, e);
+            throw new BusinessException("请求体匹配规则JSON格式无效", "INVALID_BODY_PATTERN");
         } catch (Exception e) {
-            log.warn("Invalid body pattern: {}", e.getMessage());
-            builder.withRequestBody(WireMock.containing(bodyPattern));
+            log.error("处理请求体匹配时发生未预期错误: {}", e.getMessage(), e);
+            throw new SystemException("处理请求体匹配失败", "BODY_PROCESSING_ERROR");
         }
     }
 
@@ -169,9 +187,13 @@ public class StubMappingConverter {
             } else {
                 builder.withRequestBody(WireMock.containing(bodyPattern));
             }
-        } catch (Exception e) {
-            log.warn("Fallback body pattern parsing failed: {}", e.getMessage());
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("降级处理请求体模式也失败: {}", bodyPattern, e);
+            log.warn("使用最简单的字符串包含匹配: {}", bodyPattern);
             builder.withRequestBody(WireMock.containing(bodyPattern));
+        } catch (Exception e) {
+            log.error("降级处理请求体匹配时发生未预期错误: {}", e.getMessage(), e);
+            throw new SystemException("降级处理请求体匹配失败", "FALLBACK_BODY_PROCESSING_ERROR");
         }
     }
 

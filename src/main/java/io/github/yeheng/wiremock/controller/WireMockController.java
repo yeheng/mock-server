@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,12 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * WireMock 全局状态 REST API 控制器
+ * 通过 /admin/wiremock 路径提供状态查询和全局操作
  */
 @Slf4j
 @RestController
 @RequestMapping("/admin/wiremock")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class WireMockController {
 
     private final WireMockManager wireMockManager;

@@ -91,12 +91,12 @@ public class StubMapping {
 
     @Transient
     public String getRequestPattern() {
-        if (!Boolean.TRUE.equals(enabled)) {
+        if (enabled == null || !enabled) {
             return null;
         }
-        
-        return String.format("%s %s (%s)", 
-                           method != null ? method.toUpperCase() : "GET", 
+
+        return String.format("%s %s (%s)",
+                           method != null ? method.toUpperCase() : "GET",
                            url, urlMatchType);
     }
 

@@ -16,12 +16,12 @@ import java.util.function.Supplier;
 
 /**
  * StubMapping REST API 控制器
+ * 通过 /admin/stubs 路径提供CRUD操作
  */
 @Slf4j
 @RestController
 @RequestMapping("/admin/stubs")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class StubMappingController {
 
     private final StubMappingService stubMappingService;

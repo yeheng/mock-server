@@ -9,10 +9,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Enumeration;
 
+/**
+ * 请求转换器
+ * 将HttpServletRequest转换为WireMock Request对象
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RequestConverter {
+
+    /**
+     * 预分配的头部集合初始容量
+     */
+    private static final int INITIAL_HEADER_CAPACITY = 32;
 
     public Request convert(HttpServletRequest servletRequest) throws IOException {
         String absoluteUrl = buildAbsoluteUrl(servletRequest);
@@ -43,7 +52,7 @@ public class RequestConverter {
     }
 
     private HttpHeaders buildHttpHeaders(HttpServletRequest request) {
-        var headers = new java.util.ArrayList<HttpHeader>(32);
+        var headers = new java.util.ArrayList<HttpHeader>(INITIAL_HEADER_CAPACITY);
 
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
