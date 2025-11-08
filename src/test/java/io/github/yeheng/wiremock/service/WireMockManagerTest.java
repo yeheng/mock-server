@@ -283,42 +283,6 @@ class WireMockManagerTest {
     }
 
     @Test
-    @DisplayName("测试 getRequestLogs - 服务器运行中")
-    void testGetRequestLogs_ServerRunning() {
-        // 验证
-        assertNotNull(wireMockManager.getRequestLogs());
-        assertTrue(wireMockManager.getRequestLogs().isEmpty());
-    }
-
-    @Test
-    @DisplayName("测试 getRequestLogs - 服务器未运行")
-    void testGetRequestLogs_ServerNotRunning() {
-        // 在集成模式下，这个测试与运行中状态相同
-        assertNotNull(wireMockManager.getRequestLogs());
-    }
-
-    @Test
-    @DisplayName("测试 clearRequestLogs - 服务器运行中")
-    void testClearRequestLogs_ServerRunning() {
-        // 执行
-        assertDoesNotThrow(() -> {
-            wireMockManager.clearRequestLogs();
-        });
-
-        // 验证
-        assertTrue(wireMockManager.getRequestLogs().isEmpty());
-    }
-
-    @Test
-    @DisplayName("测试 clearRequestLogs - 服务器未运行")
-    void testClearRequestLogs_ServerNotRunning() {
-        // 在集成模式下，这个测试与运行中状态相同
-        assertDoesNotThrow(() -> {
-            wireMockManager.clearRequestLogs();
-        });
-    }
-
-    @Test
     @DisplayName("测试 reset - 服务器运行中")
     void testReset_ServerRunning() {
         // 准备 - 创建真实的 MappingBuilder
@@ -339,7 +303,6 @@ class WireMockManagerTest {
 
         // 验证
         assertEquals(0, wireMockManager.getAllStubs().size());
-        assertTrue(wireMockManager.getRequestLogs().isEmpty());
     }
 
     @Test

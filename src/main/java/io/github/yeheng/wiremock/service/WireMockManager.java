@@ -1,5 +1,14 @@
 package io.github.yeheng.wiremock.service;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -7,6 +16,7 @@ import com.github.tomakehurst.wiremock.direct.DirectCallHttpServer;
 import com.github.tomakehurst.wiremock.direct.DirectCallHttpServerFactory;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
+
 import io.github.yeheng.wiremock.entity.StubMapping;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -14,14 +24,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -35,7 +37,6 @@ public class WireMockManager {
     private final ResponseConverter responseConverter;
     private final StubMappingConverter stubMappingConverter;
     private final Map<String, StubMapping> stubs = new ConcurrentHashMap<>();
-    private final Map<String, List<com.github.tomakehurst.wiremock.verification.LoggedRequest>> requestLogs = new ConcurrentHashMap<>();
 
     @Getter
     private volatile boolean isRunning = false;
@@ -87,7 +88,7 @@ public class WireMockManager {
     }
 
     public void handleRequest(jakarta.servlet.http.HttpServletRequest servletRequest,
-                              jakarta.servlet.http.HttpServletResponse servletResponse)
+            jakarta.servlet.http.HttpServletResponse servletResponse)
             throws IOException {
         if (!isRunning()) {
             write503(servletResponse, "WireMock server is not running");
@@ -243,10 +244,6 @@ public class WireMockManager {
         log.info("已重新加载所有Stub Mappings，数量: {}", stubs.size());
     }
 
-    public void clearRequestLogs() {
-        log.info("已清空所有请求日志");
-    }
-
     public void reset() {
         stubs.clear();
         if (wireMockServer != null && wireMockServer.isRunning()) {
@@ -257,12 +254,6 @@ public class WireMockManager {
 
     public List<StubMapping> getAllStubs() {
         return new ArrayList<>(stubs.values());
-    }
-
-    public List<com.github.tomakehurst.wiremock.verification.LoggedRequest> getRequestLogs() {
-        List<com.github.tomakehurst.wiremock.verification.LoggedRequest> allRequests = new ArrayList<>();
-        requestLogs.values().forEach(allRequests::addAll);
-        return allRequests;
     }
 
     private void ensureWireMockServerStarted() throws IllegalAccessException {

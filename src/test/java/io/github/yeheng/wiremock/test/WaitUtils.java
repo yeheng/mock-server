@@ -77,7 +77,7 @@ public class WaitUtils {
         return waitForCondition(() -> {
             try {
                 java.net.HttpURLConnection connection =
-                    (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                    (java.net.HttpURLConnection) new java.net.URI(url).toURL().openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(500);
                 connection.setReadTimeout(500);

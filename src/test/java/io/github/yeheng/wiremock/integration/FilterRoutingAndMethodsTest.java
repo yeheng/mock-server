@@ -373,10 +373,4 @@ class FilterRoutingAndMethodsTest {
         assertTrue(mockResponse.body().contains("No matching stub"));
     }
 
-    // TODO: 中文路径测试需要额外的URL编码处理，暂时跳过
-    // @Test
-    // @DisplayName("TDD场景15: 中文路径和中文响应应该正确处理")
-    // void testChinesePathAndResponse() throws Exception {
-    //     // 暂时跳过，需要特殊的URL编码处理
-    // }
 }
