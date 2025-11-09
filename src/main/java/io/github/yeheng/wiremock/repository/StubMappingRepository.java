@@ -25,8 +25,10 @@ public interface StubMappingRepository extends JpaRepository<StubMapping, Long> 
 
     /**
      * 根据名称模糊查找（分页支持）
+     * 使用@Query注解避免Spring Data JPA方法名解析问题
      */
-    Page<StubMapping> findByNameContainingIgnoreCasePaged(String name, Pageable pageable);
+    @Query("SELECT s FROM StubMapping s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<StubMapping> findByNameWithPagination(@Param("name") String name, Pageable pageable);
 
     /**
      * 根据启用状态查找（保持向后兼容）
@@ -35,8 +37,10 @@ public interface StubMappingRepository extends JpaRepository<StubMapping, Long> 
 
     /**
      * 根据启用状态查找（分页支持）
+     * 使用@Query注解避免Spring Data JPA方法名解析问题
      */
-    Page<StubMapping> findByEnabledPaged(Boolean enabled, Pageable pageable);
+    @Query("SELECT s FROM StubMapping s WHERE s.enabled = :enabled")
+    Page<StubMapping> findByEnabledWithPagination(@Param("enabled") Boolean enabled, Pageable pageable);
 
     /**
      * 根据 HTTP 方法查找（保持向后兼容）
@@ -45,8 +49,10 @@ public interface StubMappingRepository extends JpaRepository<StubMapping, Long> 
 
     /**
      * 根据 HTTP 方法查找（分页支持）
+     * 使用@Query注解避免Spring Data JPA方法名解析问题
      */
-    Page<StubMapping> findByMethodPaged(String method, Pageable pageable);
+    @Query("SELECT s FROM StubMapping s WHERE s.method = :method")
+    Page<StubMapping> findByMethodWithPagination(@Param("method") String method, Pageable pageable);
 
     /**
      * 根据 UUID 查找
