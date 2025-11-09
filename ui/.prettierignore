@@ -1,0 +1,23 @@
+# 构建产物
+dist
+node_modules
+*.min.js
+*.min.css
+
+# 日志
+*.log
+npm-debug.log*
+
+# 环境文件
+.env
+.env.local
+.env.*.local
+
+# 依赖
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 操作系统
+.DS_Store
+Thumbs.db

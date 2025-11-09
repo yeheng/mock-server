@@ -3,7 +3,7 @@ import { provide, ref, computed } from 'vue'
 
 const props = defineProps({
   modelValue: String,
-  defaultValue: String
+  defaultValue: String,
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -20,7 +20,7 @@ const setActiveTab = (value) => {
 provide('tabsContext', {
   tabs,
   activeTab,
-  setActiveTab
+  setActiveTab,
 })
 </script>
 

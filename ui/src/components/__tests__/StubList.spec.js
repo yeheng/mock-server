@@ -10,25 +10,31 @@ describe('Stubs Store', () => {
   it('toggles a stub', async () => {
     const store = useStubsStore()
     // Mock the fetch function
-    global.fetch = vi.fn().mockResolvedValue({ ok: true })
+    const mockResponse = {
+      ok: true,
+      json: vi.fn().mockResolvedValue({ id: '1', enabled: false }),
+    }
+    global.fetch = vi.fn().mockResolvedValue(mockResponse)
 
     store.stubs = [{ id: '1', enabled: true }]
     await store.toggleStub('1')
 
-    expect(global.fetch).toHaveBeenCalledWith('/__admin/mappings/1', expect.any(Object))
-    // The state should be updated optimistically, but let's assume the fetch is successful
-    // and the state is updated after the fetch. In a real app, you might want to test the optimistic update too.
+    expect(global.fetch).toHaveBeenCalledWith('/admin/stubs/1/toggle', expect.any(Object))
+    expect(mockResponse.json).toHaveBeenCalled()
   })
 
-  it('removes a stub', async () => {
+  it('deletes a stub', async () => {
     const store = useStubsStore()
-    // Mock the fetch function
-    global.fetch = vi.fn().mockResolvedValue({ ok: true })
+    // Mock the fetch function - need json() method for delete operation
+    const mockResponse = {
+      ok: true,
+      json: vi.fn().mockResolvedValue({}),
+    }
+    global.fetch = vi.fn().mockResolvedValue(mockResponse)
 
     store.stubs = [{ id: '1' }]
-    await store.removeStub('1')
+    await store.deleteStub('1')
 
-    expect(global.fetch).toHaveBeenCalledWith('/__admin/mappings/1', { method: 'DELETE' })
-    expect(store.stubs.length).toBe(0)
+    expect(global.fetch).toHaveBeenCalledWith('/admin/stubs/1', { method: 'DELETE' })
   })
 })

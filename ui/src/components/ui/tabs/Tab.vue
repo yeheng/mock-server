@@ -4,9 +4,9 @@ import { inject, computed } from 'vue'
 const props = defineProps({
   value: {
     type: String,
-    required: true
+    required: true,
   },
-  disabled: Boolean
+  disabled: Boolean,
 })
 
 const context = inject('tabsContext')
@@ -22,7 +22,7 @@ const isActive = computed(() => context.activeTab === props.value)
       isActive
         ? 'border-primary text-primary'
         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground',
-      disabled && 'opacity-50 cursor-not-allowed'
+      disabled && 'opacity-50 cursor-not-allowed',
     ]"
   >
     <slot></slot>

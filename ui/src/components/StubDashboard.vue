@@ -14,7 +14,7 @@ const statistics = ref({
   disabledStubs: 0,
   todayCreated: 0,
   totalRequests: 0,
-  avgResponseTime: 0
+  avgResponseTime: 0,
 })
 
 const isLoading = ref(false)
@@ -26,29 +26,29 @@ const statCards = computed(() => [
     value: statistics.value.totalStubs,
     description: '系统中所有 stub',
     icon: '📋',
-    variant: 'default'
+    variant: 'default',
   },
   {
     title: '已启用',
     value: statistics.value.enabledStubs,
     description: '当前活跃的 stub',
     icon: '✅',
-    variant: 'default'
+    variant: 'default',
   },
   {
     title: '已禁用',
     value: statistics.value.disabledStubs,
     description: '暂时禁用的 stub',
     icon: '⏸️',
-    variant: 'secondary'
+    variant: 'secondary',
   },
   {
     title: '今日创建',
     value: statistics.value.todayCreated,
     description: '新创建的 stub',
     icon: '🆕',
-    variant: 'default'
-  }
+    variant: 'default',
+  },
 ])
 
 // 快速操作
@@ -58,29 +58,29 @@ const quickActions = ref([
     description: '快速创建一个新的 stub 映射',
     icon: '➕',
     action: 'create',
-    color: 'bg-blue-500 hover:bg-blue-600'
+    color: 'bg-blue-500 hover:bg-blue-600',
   },
   {
     title: '批量导入',
     description: '从 JSON 文件导入 stub',
     icon: '📤',
     action: 'import',
-    color: 'bg-green-500 hover:bg-green-600'
+    color: 'bg-green-500 hover:bg-green-600',
   },
   {
     title: '导出配置',
     description: '导出所有 stub 为配置文件',
     icon: '💾',
     action: 'export',
-    color: 'bg-purple-500 hover:bg-purple-600'
+    color: 'bg-purple-500 hover:bg-purple-600',
   },
   {
     title: '清理测试数据',
     description: '删除所有测试用的 stub',
     icon: '🧹',
     action: 'cleanup',
-    color: 'bg-red-500 hover:bg-red-600'
-  }
+    color: 'bg-red-500 hover:bg-red-600',
+  },
 ])
 
 // 需求更新：移除最近活动模块
@@ -158,7 +158,7 @@ const getActivityIcon = (type) => {
     create: '➕',
     update: '✏️',
     delete: '🗑️',
-    toggle: '🔄'
+    toggle: '🔄',
   }
   return icons[type] || '📝'
 }
@@ -169,7 +169,7 @@ const getActivityColor = (type) => {
     create: 'text-green-600',
     update: 'text-blue-600',
     delete: 'text-red-600',
-    toggle: 'text-purple-600'
+    toggle: 'text-purple-600',
   }
   return colors[type] || 'text-gray-600'
 }
@@ -181,13 +181,9 @@ const getActivityColor = (type) => {
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-3xl font-bold">Stub 仪表板</h1>
-        <p class="text-muted-foreground mt-1">
-          WireMock stub 映射管理和监控中心
-        </p>
+        <p class="text-muted-foreground mt-1">WireMock stub 映射管理和监控中心</p>
       </div>
-      <Button @click="$emit('create-stub')" size="lg">
-        创建新 Stub
-      </Button>
+      <Button @click="$emit('create-stub')" size="lg"> 创建新 Stub </Button>
     </div>
 
     <!-- 统计卡片 -->
@@ -213,14 +209,12 @@ const getActivityColor = (type) => {
       <Card>
         <CardHeader>
           <CardTitle>快速操作</CardTitle>
-          <CardDescription>
-            常用的 stub 管理操作
-          </CardDescription>
+          <CardDescription> 常用的 stub 管理操作 </CardDescription>
         </CardHeader>
         <CardContent>
           <div class="grid grid-cols-2 gap-4">
-            <div 
-              v-for="action in quickActions" 
+            <div
+              v-for="action in quickActions"
               :key="action.action"
               class="p-4 rounded-lg cursor-pointer transition-colors text-white"
               :class="action.color"
@@ -237,8 +231,6 @@ const getActivityColor = (type) => {
           </div>
         </CardContent>
       </Card>
-
-      
     </div>
 
     <!-- 最近创建的 Stub -->
@@ -247,19 +239,15 @@ const getActivityColor = (type) => {
         <div class="flex items-center justify-between">
           <div>
             <CardTitle>最近的 Stub</CardTitle>
-            <CardDescription>
-              最新创建的 stub 映射
-            </CardDescription>
+            <CardDescription> 最新创建的 stub 映射 </CardDescription>
           </div>
-          <Button variant="outline" @click="$emit('view-all')">
-            查看全部
-          </Button>
+          <Button variant="outline" @click="$emit('view-all')"> 查看全部 </Button>
         </div>
       </CardHeader>
       <CardContent>
         <div v-if="stubsStore.stubs.length > 0" class="space-y-3">
-          <div 
-            v-for="stub in stubsStore.stubs" 
+          <div
+            v-for="stub in stubsStore.stubs"
             :key="stub.id"
             class="flex items-center justify-between p-3 border rounded-lg hover:bg-muted transition-colors"
           >
@@ -275,26 +263,12 @@ const getActivityColor = (type) => {
               </div>
             </div>
             <div class="flex items-center space-x-2">
-              <Button 
-                size="sm" 
-                variant="ghost"
-                @click="$emit('view-stub', stub)"
-              >
-                查看
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                @click="$emit('edit-stub', stub)"
-              >
-                编辑
-              </Button>
+              <Button size="sm" variant="ghost" @click="$emit('view-stub', stub)"> 查看 </Button>
+              <Button size="sm" variant="outline" @click="$emit('edit-stub', stub)"> 编辑 </Button>
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-8 text-muted-foreground">
-          暂无 stub 数据
-        </div>
+        <div v-else class="text-center py-8 text-muted-foreground">暂无 stub 数据</div>
       </CardContent>
     </Card>
   </div>

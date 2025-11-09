@@ -4,8 +4,8 @@ import { inject, computed } from 'vue'
 const props = defineProps({
   value: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 })
 
 const context = inject('tabsContext')

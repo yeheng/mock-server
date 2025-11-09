@@ -6,13 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertDialog } from '@/components/ui/alert-dialog'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -34,18 +28,15 @@ const showDeleteConfirm = ref(false)
 const stubToDelete = ref(null)
 
 // 计算属性
-const selectedStubsList = computed(() => 
-  Array.from(stubsStore.selectedStubs)
+const selectedStubsList = computed(() => Array.from(stubsStore.selectedStubs))
+
+const allVisibleSelected = computed(
+  () =>
+    stubsStore.stubs.length > 0 &&
+    stubsStore.stubs.every((stub) => stubsStore.selectedStubs.has(stub.id))
 )
 
-const allVisibleSelected = computed(() => 
-  stubsStore.stubs.length > 0 && 
-  stubsStore.stubs.every(stub => stubsStore.selectedStubs.has(stub.id))
-)
-
-const hasSelection = computed(() => 
-  stubsStore.selectedStubs.size > 0
-)
+const hasSelection = computed(() => stubsStore.selectedStubs.size > 0)
 
 // 初始化
 onMounted(async () => {
@@ -99,7 +90,7 @@ const handleDeleteClick = (stub) => {
 
 const confirmDelete = async () => {
   if (!stubToDelete.value) return
-  
+
   isDeleting.value = true
   try {
     await stubsStore.deleteStub(stubToDelete.value.id)
@@ -130,7 +121,7 @@ const handleCreate = () => {
 // 批量操作
 const handleBatchDelete = async () => {
   if (selectedStubsList.value.length === 0) return
-  
+
   if (confirm(`确定要删除选中的 ${selectedStubsList.value.length} 个stub吗？`)) {
     try {
       await stubsStore.batchDeleteStubs(selectedStubsList.value)
@@ -143,7 +134,7 @@ const handleBatchDelete = async () => {
 
 const handleBatchEnable = async () => {
   if (selectedStubsList.value.length === 0) return
-  
+
   try {
     await stubsStore.batchToggleStubs(selectedStubsList.value, true)
     stubsStore.clearSelection()
@@ -154,7 +145,7 @@ const handleBatchEnable = async () => {
 
 const handleBatchDisable = async () => {
   if (selectedStubsList.value.length === 0) return
-  
+
   try {
     await stubsStore.batchToggleStubs(selectedStubsList.value, false)
     stubsStore.clearSelection()
@@ -187,7 +178,7 @@ const formatMethod = (method) => {
     POST: 'bg-blue-100 text-blue-800',
     PUT: 'bg-yellow-100 text-yellow-800',
     DELETE: 'bg-red-100 text-red-800',
-    PATCH: 'bg-purple-100 text-purple-800'
+    PATCH: 'bg-purple-100 text-purple-800',
   }
   return colors[method] || 'bg-gray-100 text-gray-800'
 }
@@ -203,21 +194,15 @@ const formatDate = (dateString) => {
       <div class="flex items-center justify-between">
         <div>
           <CardTitle>Stub 管理</CardTitle>
-          <CardDescription>
-            管理和监控所有 WireMock stub 映射
-          </CardDescription>
+          <CardDescription> 管理和监控所有 WireMock stub 映射 </CardDescription>
         </div>
         <div class="flex space-x-2">
-          <Button @click="handleReload" variant="outline">
-            重新加载
-          </Button>
-          <Button @click="handleCreate">
-            创建 Stub
-          </Button>
+          <Button @click="handleReload" variant="outline"> 重新加载 </Button>
+          <Button @click="handleCreate"> 创建 Stub </Button>
         </div>
       </div>
     </CardHeader>
-    
+
     <CardContent>
       <!-- 搜索和筛选 -->
       <div class="flex items-center space-x-4 mb-6">
@@ -228,9 +213,7 @@ const formatDate = (dateString) => {
             @keyup.enter="handleSearch"
           />
         </div>
-        <Button @click="handleSearch" variant="outline">
-          搜索
-        </Button>
+        <Button @click="handleSearch" variant="outline"> 搜索 </Button>
       </div>
 
       <!-- 批量操作 -->
@@ -238,18 +221,10 @@ const formatDate = (dateString) => {
         <span class="text-sm text-muted-foreground">
           已选中 {{ selectedStubsList.length }} 个项目
         </span>
-        <Button size="sm" variant="outline" @click="handleBatchEnable">
-          批量启用
-        </Button>
-        <Button size="sm" variant="outline" @click="handleBatchDisable">
-          批量禁用
-        </Button>
-        <Button size="sm" variant="destructive" @click="handleBatchDelete">
-          批量删除
-        </Button>
-        <Button size="sm" variant="ghost" @click="stubsStore.clearSelection()">
-          取消选择
-        </Button>
+        <Button size="sm" variant="outline" @click="handleBatchEnable"> 批量启用 </Button>
+        <Button size="sm" variant="outline" @click="handleBatchDisable"> 批量禁用 </Button>
+        <Button size="sm" variant="destructive" @click="handleBatchDelete"> 批量删除 </Button>
+        <Button size="sm" variant="ghost" @click="stubsStore.clearSelection()"> 取消选择 </Button>
       </div>
 
       <!-- 表格 -->
@@ -257,10 +232,7 @@ const formatDate = (dateString) => {
         <TableHeader>
           <TableRow>
             <TableHead class="w-12">
-              <Checkbox 
-                :model-value="allVisibleSelected"
-                @update:model-value="handleSelectAll"
-              />
+              <Checkbox :model-value="allVisibleSelected" @update:model-value="handleSelectAll" />
             </TableHead>
             <TableHead>名称</TableHead>
             <TableHead>方法</TableHead>
@@ -275,7 +247,7 @@ const formatDate = (dateString) => {
           <template v-if="stubsStore.stubs.length > 0">
             <TableRow v-for="stub in stubsStore.stubs" :key="stub.id">
               <TableCell>
-                <Checkbox 
+                <Checkbox
                   :model-value="stubsStore.isSelected(stub.id)"
                   @update:model-value="() => handleSelectStub(stub.id)"
                 />
@@ -289,10 +261,10 @@ const formatDate = (dateString) => {
                 </div>
               </TableCell>
               <TableCell>
-                <span 
+                <span
                   :class="[
                     'inline-flex items-center px-2 py-1 rounded text-xs font-medium',
-                    formatMethod(stub.method)
+                    formatMethod(stub.method),
                   ]"
                 >
                   {{ stub.method }}
@@ -314,24 +286,19 @@ const formatDate = (dateString) => {
               </TableCell>
               <TableCell>
                 <div class="flex items-center space-x-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="ghost"
                     @click="handleViewDetails(stub)"
                     title="查看详情"
                   >
                     查看
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    @click="handleEdit(stub)"
-                    title="编辑"
-                  >
+                  <Button size="sm" variant="ghost" @click="handleEdit(stub)" title="编辑">
                     编辑
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     @click="handleToggle(stub.id)"
                     :disabled="stubsStore.loading"
@@ -339,8 +306,8 @@ const formatDate = (dateString) => {
                   >
                     {{ stub.enabled ? '禁用' : '启用' }}
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="destructive"
                     @click="handleDeleteClick(stub)"
                     :disabled="isDeleting"
@@ -382,22 +349,17 @@ const formatDate = (dateString) => {
     :open="showDeleteConfirm"
     :title="`确认删除 stub: ${stubToDelete?.name}`"
     description="您确定要删除此 stub 吗？此操作不可撤销。"
-    @update:open="(open) => showDeleteConfirm = open"
+    @update:open="(open) => (showDeleteConfirm = open)"
     @confirm="confirmDelete"
   >
     <template #trigger>
       <span></span>
     </template>
     <template #cancel>
-      <Button variant="outline" @click="cancelDelete">
-        取消
-      </Button>
+      <Button variant="outline" @click="cancelDelete"> 取消 </Button>
     </template>
     <template #confirm>
-      <Button 
-        variant="destructive" 
-        :disabled="isDeleting"
-      >
+      <Button variant="destructive" :disabled="isDeleting">
         {{ isDeleting ? '删除中...' : '确认删除' }}
       </Button>
     </template>

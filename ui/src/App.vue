@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import StubDetails from '@/components/StubDetails.vue'
+import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +18,13 @@ const router = useRouter()
 const navigationItems = [
   { id: 'dashboard', label: '仪表板', icon: '📊', description: '概览和统计', to: '/' },
   { id: 'list', label: 'Stub 列表', icon: '📋', description: '管理所有 stub', to: '/stubs' },
-  { id: 'create', label: '创建 Stub', icon: '➕', description: '新建 stub 映射', to: '/stubs/create' }
+  {
+    id: 'create',
+    label: '创建 Stub',
+    icon: '➕',
+    description: '新建 stub 映射',
+    to: '/stubs/create',
+  },
 ]
 
 // 当前页面标题
@@ -87,7 +94,7 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
           <!-- 左侧标题和状态 -->
           <div class="flex items-center space-x-4">
             <h1 class="text-xl font-bold">WireMock UI Manager</h1>
-            <Badge 
+            <Badge
               :variant="wiremockStatus === 'connected' ? 'default' : 'destructive'"
               class="text-xs"
             >
@@ -97,11 +104,7 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
 
           <!-- 右侧操作 -->
           <div class="flex items-center space-x-2">
-            <Button 
-              @click="handleCreateStub" 
-              size="sm"
-              class="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button @click="handleCreateStub" size="sm" class="bg-blue-600 hover:bg-blue-700">
               <span class="mr-1">➕</span>
               创建 Stub
             </Button>
@@ -143,13 +146,13 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
               <div class="flex justify-between">
                 <span>已启用</span>
                 <span class="font-medium text-green-600">
-                  {{ stubsStore.stubs.filter(s => s.enabled).length }}
+                  {{ stubsStore.stubs.filter((s) => s.enabled).length }}
                 </span>
               </div>
               <div class="flex justify-between">
                 <span>已禁用</span>
                 <span class="font-medium text-gray-500">
-                  {{ stubsStore.stubs.filter(s => !s.enabled).length }}
+                  {{ stubsStore.stubs.filter((s) => !s.enabled).length }}
                 </span>
               </div>
             </div>
@@ -158,33 +161,35 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
       </aside>
 
       <!-- 主内容 -->
-      <main class="flex-1 p-6 overflow-auto">
-        <!-- 页面标题 -->
-        <div class="mb-6">
-          <h2 class="text-2xl font-bold">{{ pageTitle }}</h2>
-          <p class="text-muted-foreground mt-1">
-            欢迎使用 WireMock stub 管理界面
-          </p>
-          <!-- 面包屑导航 -->
-          <nav class="text-sm text-muted-foreground mt-2">
-            <ol class="flex items-center space-x-2">
-              <li>
-                <RouterLink to="/" class="hover:underline">首页</RouterLink>
-              </li>
-              <li v-for="m in route.matched" :key="m.path" class="flex items-center space-x-2">
-                <span>›</span>
-                <span>{{ m.meta?.title }}</span>
-              </li>
-            </ol>
-          </nav>
-        </div>
+      <main class="flex-1 overflow-auto">
+        <ErrorBoundary>
+          <div class="p-6">
+            <!-- 页面标题 -->
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold">{{ pageTitle }}</h2>
+              <p class="text-muted-foreground mt-1">欢迎使用 WireMock stub 管理界面</p>
+              <!-- 面包屑导航 -->
+              <nav class="text-sm text-muted-foreground mt-2">
+                <ol class="flex items-center space-x-2">
+                  <li>
+                    <RouterLink to="/" class="hover:underline">首页</RouterLink>
+                  </li>
+                  <li v-for="m in route.matched" :key="m.path" class="flex items-center space-x-2">
+                    <span>›</span>
+                    <span>{{ m.meta?.title }}</span>
+                  </li>
+                </ol>
+              </nav>
+            </div>
 
-        <!-- 路由页面内容 -->
-        <RouterView 
-          @create-stub="handleCreateStub"
-          @view-stub="handleViewStub"
-          @edit-stub="handleEditStub"
-        />
+            <!-- 路由页面内容 -->
+            <RouterView
+              @create-stub="handleCreateStub"
+              @view-stub="handleViewStub"
+              @edit-stub="handleEditStub"
+            />
+          </div>
+        </ErrorBoundary>
       </main>
     </div>
 

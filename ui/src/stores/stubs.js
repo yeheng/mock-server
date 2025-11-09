@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { handleApiError } from '@/lib/errorHandler'
 
 export const useStubsStore = defineStore('stubs', () => {
   const stubs = ref([])
@@ -25,20 +26,27 @@ export const useStubsStore = defineStore('stubs', () => {
       const params = new URLSearchParams({
         page: page.toString(),
         size: size.toString(),
-        ...(keyword && { keyword })
+        ...(keyword && { keyword }),
       })
-      
+
       const response = await fetch(`${API_BASE}/page?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        stubs.value = data.content
-        totalElements.value = data.totalElements
-        currentPage.value = data.number + 1
-        pageSize.value = data.size
+
+      if (!response.ok) {
+        // 使用错误处理工具
+        throw response
       }
+
+      const data = await response.json()
+      stubs.value = data.content
+      totalElements.value = data.totalElements
+      currentPage.value = data.number + 1
+      pageSize.value = data.size
     } catch (error) {
-      console.error('Error fetching stubs:', error)
-      throw error
+      // 使用统一的错误处理
+      const errorInfo = handleApiError(error)
+      // 可以在这里添加用户通知逻辑
+      // 例如: showNotification(errorInfo)
+      throw errorInfo
     } finally {
       loading.value = false
     }
@@ -69,9 +77,9 @@ export const useStubsStore = defineStore('stubs', () => {
       const response = await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stubData)
+        body: JSON.stringify(stubData),
       })
-      
+
       if (response.ok) {
         const newStub = await response.json()
         await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
@@ -90,9 +98,9 @@ export const useStubsStore = defineStore('stubs', () => {
       const response = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stubData)
+        body: JSON.stringify(stubData),
       })
-      
+
       if (response.ok) {
         const updatedStub = await response.json()
         await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
@@ -108,10 +116,10 @@ export const useStubsStore = defineStore('stubs', () => {
   // 删除stub
   const deleteStub = async (id) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}`, { 
-        method: 'DELETE' 
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'DELETE',
       })
-      
+
       if (response.ok) {
         await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
         return true
@@ -126,13 +134,13 @@ export const useStubsStore = defineStore('stubs', () => {
   // 切换stub启用状态
   const toggleStub = async (id) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}/toggle`, { 
-        method: 'POST' 
+      const response = await fetch(`${API_BASE}/${id}/toggle`, {
+        method: 'POST',
       })
-      
+
       if (response.ok) {
         const updatedStub = await response.json()
-        const index = stubs.value.findIndex(s => s.id === id)
+        const index = stubs.value.findIndex((s) => s.id === id)
         if (index !== -1) {
           stubs.value[index] = updatedStub
         }
@@ -148,10 +156,10 @@ export const useStubsStore = defineStore('stubs', () => {
   // 重新加载所有stubs
   const reloadAllStubs = async () => {
     try {
-      const response = await fetch(`${API_BASE}/reload`, { 
-        method: 'POST' 
+      const response = await fetch(`${API_BASE}/reload`, {
+        method: 'POST',
       })
-      
+
       if (response.ok) {
         await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
         return true
@@ -178,7 +186,7 @@ export const useStubsStore = defineStore('stubs', () => {
 
   // 批量删除
   const batchDeleteStubs = async (ids) => {
-    const promises = ids.map(id => deleteStub(id))
+    const promises = ids.map((id) => deleteStub(id))
     try {
       await Promise.all(promises)
       return true
@@ -191,7 +199,7 @@ export const useStubsStore = defineStore('stubs', () => {
   // 批量切换状态
   const batchToggleStubs = async (ids, enable = true) => {
     const promises = ids.map(async (id) => {
-      const stub = stubs.value.find(s => s.id === id)
+      const stub = stubs.value.find((s) => s.id === id)
       if (stub && stub.enabled !== enable) {
         return toggleStub(id)
       }
@@ -219,7 +227,7 @@ export const useStubsStore = defineStore('stubs', () => {
   }
 
   const selectAllVisible = () => {
-    stubs.value.forEach(stub => {
+    stubs.value.forEach((stub) => {
       selectedStubs.value.add(stub.id)
     })
   }
@@ -235,12 +243,12 @@ export const useStubsStore = defineStore('stubs', () => {
     totalElements,
     searchKeyword,
     selectedStubs,
-    
+
     // computed
     totalPages,
     hasNextPage,
     hasPreviousPage,
-    
+
     // actions
     fetchStubs,
     searchStubs,
@@ -257,6 +265,6 @@ export const useStubsStore = defineStore('stubs', () => {
     deselectStub,
     clearSelection,
     selectAllVisible,
-    isSelected
+    isSelected,
   }
 })

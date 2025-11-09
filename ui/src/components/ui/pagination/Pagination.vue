@@ -7,7 +7,7 @@ const props = defineProps({
   totalElements: Number,
   pageSize: Number,
   hasNextPage: Boolean,
-  hasPreviousPage: Boolean
+  hasPreviousPage: Boolean,
 })
 
 const emit = defineEmits(['page-change', 'size-change'])
@@ -40,7 +40,7 @@ const goToNext = () => {
   <div class="flex items-center justify-between px-2 py-4">
     <div class="flex items-center space-x-2 text-sm text-muted-foreground">
       <span>Showing {{ startItem }} to {{ endItem }} of {{ totalElements }} results</span>
-      <select 
+      <select
         class="ml-2 rounded border border-input bg-background px-2 py-1 text-xs"
         :value="pageSize"
         @change="$emit('size-change', parseInt($event.target.value))"
@@ -53,15 +53,10 @@ const goToNext = () => {
     </div>
 
     <div class="flex items-center space-x-2">
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="!hasPreviousPage"
-        @click="goToPrevious"
-      >
+      <Button variant="outline" size="sm" :disabled="!hasPreviousPage" @click="goToPrevious">
         Previous
       </Button>
-      
+
       <div class="flex items-center space-x-1">
         <template v-for="page in totalPages" :key="page">
           <Button
@@ -75,14 +70,7 @@ const goToNext = () => {
         </template>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="!hasNextPage"
-        @click="goToNext"
-      >
-        Next
-      </Button>
+      <Button variant="outline" size="sm" :disabled="!hasNextPage" @click="goToNext"> Next </Button>
     </div>
   </div>
 </template>

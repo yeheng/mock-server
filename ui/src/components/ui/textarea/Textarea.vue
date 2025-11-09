@@ -7,8 +7,8 @@ const props = defineProps({
   disabled: Boolean,
   rows: {
     type: Number,
-    default: 3
-  }
+    default: 3,
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])

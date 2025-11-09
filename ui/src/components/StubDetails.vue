@@ -12,12 +12,12 @@ const emit = defineEmits(['close', 'edit'])
 const props = defineProps({
   stub: {
     type: Object,
-    required: true
+    required: true,
   },
   show: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 const stubsStore = useStubsStore()
@@ -26,18 +26,25 @@ const activeTab = ref('overview')
 const stubDetails = ref(null)
 
 // 监听 stub 变化
-watch(() => props.stub, async (newStub) => {
-  if (newStub && props.show) {
-    await loadStubDetails(newStub.id)
-  }
-}, { immediate: true })
+watch(
+  () => props.stub,
+  async (newStub) => {
+    if (newStub && props.show) {
+      await loadStubDetails(newStub.id)
+    }
+  },
+  { immediate: true }
+)
 
 // 监听 show 变化
-watch(() => props.show, async (show) => {
-  if (show && props.stub) {
-    await loadStubDetails(props.stub.id)
+watch(
+  () => props.show,
+  async (show) => {
+    if (show && props.stub) {
+      await loadStubDetails(props.stub.id)
+    }
   }
-})
+)
 
 // 加载stub详情
 const loadStubDetails = async (id) => {
@@ -69,7 +76,7 @@ const handleEdit = () => {
 // 切换启用状态
 const handleToggle = async () => {
   if (!stubDetails.value) return
-  
+
   try {
     await stubsStore.toggleStub(stubDetails.value.id)
     stubDetails.value.enabled = !stubDetails.value.enabled
@@ -113,7 +120,7 @@ const getMethodStyle = (method) => {
     DELETE: 'bg-red-100 text-red-800',
     PATCH: 'bg-purple-100 text-purple-800',
     HEAD: 'bg-gray-100 text-gray-800',
-    OPTIONS: 'bg-indigo-100 text-indigo-800'
+    OPTIONS: 'bg-indigo-100 text-indigo-800',
   }
   return styles[method] || 'bg-gray-100 text-gray-800'
 }
@@ -125,23 +132,23 @@ const isTesting = ref(false)
 // 测试stub
 const testStub = async () => {
   if (!stubDetails.value) return
-  
+
   isTesting.value = true
   try {
     // 模拟测试请求
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
     testResult.value = {
       success: true,
       status: stubDetails.value.response?.status || 200,
       headers: stubDetails.value.response?.headers || {},
       body: stubDetails.value.response?.body || '',
-      responseTime: Math.floor(Math.random() * 500) + 50
+      responseTime: Math.floor(Math.random() * 500) + 50,
     }
   } catch (error) {
     testResult.value = {
       success: false,
-      error: 'Test failed'
+      error: 'Test failed',
     }
   } finally {
     isTesting.value = false
@@ -153,13 +160,17 @@ const testStub = async () => {
   <Dialog
     :open="show"
     :title="stubDetails?.name || stub?.name || 'Stub 详情'"
-    @update:open="(open) => { if (!open) handleClose() }"
+    @update:open="
+      (open) => {
+        if (!open) handleClose()
+      }
+    "
   >
     <div class="max-h-[80vh] overflow-y-auto pr-2">
       <div v-if="isLoading" class="flex justify-center py-8">
         <div class="text-muted-foreground">加载中...</div>
       </div>
-      
+
       <div v-else-if="stubDetails" class="space-y-6">
         <!-- 头部信息 -->
         <Card>
@@ -170,10 +181,10 @@ const testStub = async () => {
                   <Badge :variant="stubDetails.enabled ? 'default' : 'secondary'">
                     {{ stubDetails.method }}
                   </Badge>
-                  <span 
+                  <span
                     :class="[
                       'inline-flex items-center px-2 py-1 rounded text-xs font-medium',
-                      getMethodStyle(stubDetails.method)
+                      getMethodStyle(stubDetails.method),
                     ]"
                   >
                     {{ stubDetails.method }}
@@ -191,15 +202,8 @@ const testStub = async () => {
                 <Button size="sm" variant="outline" @click="testStub" :disabled="isTesting">
                   {{ isTesting ? '测试中...' : '测试' }}
                 </Button>
-                <Button size="sm" variant="outline" @click="handleEdit">
-                  编辑
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  @click="handleToggle"
-                  :disabled="isLoading"
-                >
+                <Button size="sm" variant="outline" @click="handleEdit"> 编辑 </Button>
+                <Button size="sm" variant="outline" @click="handleToggle" :disabled="isLoading">
                   {{ stubDetails.enabled ? '禁用' : '启用' }}
                 </Button>
               </div>
@@ -249,9 +253,7 @@ const testStub = async () => {
                 </div>
               </div>
             </div>
-            <div v-else class="text-red-600">
-              ❌ 测试失败: {{ testResult.error }}
-            </div>
+            <div v-else class="text-red-600">❌ 测试失败: {{ testResult.error }}</div>
           </CardContent>
         </Card>
 
@@ -327,10 +329,15 @@ const testStub = async () => {
                   <CardTitle>请求头匹配</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div v-if="stubDetails.request?.headers && Object.keys(stubDetails.request.headers).length > 0" 
-                       class="space-y-2">
-                    <div 
-                      v-for="(value, key) in stubDetails.request.headers" 
+                  <div
+                    v-if="
+                      stubDetails.request?.headers &&
+                      Object.keys(stubDetails.request.headers).length > 0
+                    "
+                    class="space-y-2"
+                  >
+                    <div
+                      v-for="(value, key) in stubDetails.request.headers"
                       :key="key"
                       class="flex items-center justify-between p-2 bg-muted rounded"
                     >
@@ -338,8 +345,8 @@ const testStub = async () => {
                         <code class="text-sm">{{ key }}</code>
                         <code class="text-sm ml-2 text-muted-foreground">{{ value }}</code>
                       </div>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         @click="copyToClipboard(`${key}: ${value}`)"
                       >
@@ -347,9 +354,7 @@ const testStub = async () => {
                       </Button>
                     </div>
                   </div>
-                  <div v-else class="text-sm text-muted-foreground">
-                    暂无请求头匹配规则
-                  </div>
+                  <div v-else class="text-sm text-muted-foreground">暂无请求头匹配规则</div>
                 </CardContent>
               </Card>
 
@@ -358,10 +363,15 @@ const testStub = async () => {
                   <CardTitle>查询参数匹配</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div v-if="stubDetails.request?.queryParameters && Object.keys(stubDetails.request.queryParameters).length > 0" 
-                       class="space-y-2">
-                    <div 
-                      v-for="(value, key) in stubDetails.request.queryParameters" 
+                  <div
+                    v-if="
+                      stubDetails.request?.queryParameters &&
+                      Object.keys(stubDetails.request.queryParameters).length > 0
+                    "
+                    class="space-y-2"
+                  >
+                    <div
+                      v-for="(value, key) in stubDetails.request.queryParameters"
                       :key="key"
                       class="flex items-center justify-between p-2 bg-muted rounded"
                     >
@@ -369,18 +379,12 @@ const testStub = async () => {
                         <code class="text-sm">{{ key }}</code>
                         <code class="text-sm ml-2 text-muted-foreground">{{ value }}</code>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        @click="copyToClipboard(`${key}=${value}`)"
-                      >
+                      <Button size="sm" variant="ghost" @click="copyToClipboard(`${key}=${value}`)">
                         复制
                       </Button>
                     </div>
                   </div>
-                  <div v-else class="text-sm text-muted-foreground">
-                    暂无查询参数匹配规则
-                  </div>
+                  <div v-else class="text-sm text-muted-foreground">暂无查询参数匹配规则</div>
                 </CardContent>
               </Card>
 
@@ -390,13 +394,11 @@ const testStub = async () => {
                 </CardHeader>
                 <CardContent>
                   <div v-if="stubDetails.request?.bodyPatterns?.length" class="space-y-2">
-                    <pre class="text-xs bg-muted p-3 rounded overflow-x-auto">
-{{ formatJSON(stubDetails.request.bodyPatterns) }}
+                    <pre class="text-xs bg-muted p-3 rounded overflow-x-auto"
+                      >{{ formatJSON(stubDetails.request.bodyPatterns) }}
                     </pre>
                   </div>
-                  <div v-else class="text-sm text-muted-foreground">
-                    暂无请求体匹配规则
-                  </div>
+                  <div v-else class="text-sm text-muted-foreground">暂无请求体匹配规则</div>
                 </CardContent>
               </Card>
             </div>
@@ -421,10 +423,15 @@ const testStub = async () => {
                   <CardTitle>响应头</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div v-if="stubDetails.response?.headers && Object.keys(stubDetails.response.headers).length > 0" 
-                       class="space-y-2">
-                    <div 
-                      v-for="(value, key) in stubDetails.response.headers" 
+                  <div
+                    v-if="
+                      stubDetails.response?.headers &&
+                      Object.keys(stubDetails.response.headers).length > 0
+                    "
+                    class="space-y-2"
+                  >
+                    <div
+                      v-for="(value, key) in stubDetails.response.headers"
                       :key="key"
                       class="flex items-center justify-between p-2 bg-muted rounded"
                     >
@@ -432,8 +439,8 @@ const testStub = async () => {
                         <code class="text-sm">{{ key }}</code>
                         <code class="text-sm ml-2 text-muted-foreground">{{ value }}</code>
                       </div>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         @click="copyToClipboard(`${key}: ${value}`)"
                       >
@@ -441,9 +448,7 @@ const testStub = async () => {
                       </Button>
                     </div>
                   </div>
-                  <div v-else class="text-sm text-muted-foreground">
-                    暂无响应头设置
-                  </div>
+                  <div v-else class="text-sm text-muted-foreground">暂无响应头设置</div>
                 </CardContent>
               </Card>
 
@@ -457,12 +462,14 @@ const testStub = async () => {
                     <code class="text-sm">{{ stubDetails.response.bodyFileName }}</code>
                   </div>
                   <div v-if="stubDetails.response?.body">
-                    <pre class="text-xs bg-muted p-3 rounded overflow-x-auto max-h-64">
-{{ stubDetails.response.body }}
+                    <pre class="text-xs bg-muted p-3 rounded overflow-x-auto max-h-64"
+                      >{{ stubDetails.response.body }}
                     </pre>
                   </div>
-                  <div v-if="!stubDetails.response?.body && !stubDetails.response?.bodyFileName" 
-                       class="text-sm text-muted-foreground">
+                  <div
+                    v-if="!stubDetails.response?.body && !stubDetails.response?.bodyFileName"
+                    class="text-sm text-muted-foreground"
+                  >
                     暂无响应体设置
                   </div>
                 </CardContent>
@@ -475,13 +482,11 @@ const testStub = async () => {
             <Card>
               <CardHeader>
                 <CardTitle>完整的 Stub 配置</CardTitle>
-                <CardDescription>
-                  原始的 JSON 配置信息
-                </CardDescription>
+                <CardDescription> 原始的 JSON 配置信息 </CardDescription>
               </CardHeader>
               <CardContent>
-                <pre class="text-xs bg-muted p-3 rounded overflow-x-auto max-h-96">
-{{ formatJSON(stubDetails) }}
+                <pre class="text-xs bg-muted p-3 rounded overflow-x-auto max-h-96"
+                  >{{ formatJSON(stubDetails) }}
                 </pre>
               </CardContent>
             </Card>
@@ -489,9 +494,7 @@ const testStub = async () => {
         </Tabs>
       </div>
 
-      <div v-else class="text-center py-8 text-muted-foreground">
-        无法加载 stub 详情
-      </div>
+      <div v-else class="text-center py-8 text-muted-foreground">无法加载 stub 详情</div>
     </div>
   </Dialog>
 </template>
