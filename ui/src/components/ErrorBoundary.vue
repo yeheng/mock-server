@@ -5,6 +5,8 @@ import { ref, onErrorCaptured } from 'vue'
 const hasError = ref(false)
 const errorMessage = ref('')
 const errorInfo = ref(null)
+// 运行环境标识：避免在模板中直接使用 import.meta
+const isDev = import.meta.env.DEV
 
 // 捕获子组件错误
 onErrorCaptured((error, instance, info) => {
@@ -79,7 +81,7 @@ const refreshPage = () => {
         </div>
 
         <!-- 错误详情（开发环境） -->
-        <div v-if="import.meta.env.DEV && errorInfo" class="mt-4 p-3 bg-gray-50 rounded-md">
+        <div v-if="isDev && errorInfo" class="mt-4 p-3 bg-gray-50 rounded-md">
           <details class="text-sm">
             <summary class="cursor-pointer text-gray-700 font-medium">错误详情</summary>
             <pre class="mt-2 text-xs text-gray-600 overflow-auto">{{ errorInfo }}</pre>

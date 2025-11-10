@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - heading "WireMock UI Manager" [level=1] [ref=e8]
+        - generic [ref=e9]: 🟢 已连接
+      - button "➕ 创建 Stub" [ref=e11]:
+        - generic [ref=e12]: ➕
+        - text: 创建 Stub
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - navigation [ref=e15]:
+        - generic [ref=e16]:
+          - link "📊 仪表板 概览和统计" [ref=e17] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e18]: 📊
+            - generic [ref=e19]:
+              - generic [ref=e20]: 仪表板
+              - generic [ref=e21]: 概览和统计
+          - link "📋 Stub 列表 管理所有 stub" [ref=e22] [cursor=pointer]:
+            - /url: /stubs
+            - generic [ref=e23]: 📋
+            - generic [ref=e24]:
+              - generic [ref=e25]: Stub 列表
+              - generic [ref=e26]: 管理所有 stub
+          - link "➕ 创建 Stub 新建 stub 映射" [ref=e27] [cursor=pointer]:
+            - /url: /stubs/create
+            - generic [ref=e28]: ➕
+            - generic [ref=e29]:
+              - generic [ref=e30]: 创建 Stub
+              - generic [ref=e31]: 新建 stub 映射
+        - generic [ref=e32]:
+          - heading "快速统计" [level=3] [ref=e33]
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - generic [ref=e36]: 总 Stub
+              - generic [ref=e37]: "0"
+            - generic [ref=e38]:
+              - generic [ref=e39]: 已启用
+              - generic [ref=e40]: "0"
+            - generic [ref=e41]:
+              - generic [ref=e42]: 已禁用
+              - generic [ref=e43]: "0"
+    - main [ref=e44]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - heading "Stub 列表" [level=2] [ref=e48]
+          - paragraph [ref=e49]: 欢迎使用 WireMock stub 管理界面
+          - navigation [ref=e50]:
+            - list [ref=e51]:
+              - listitem [ref=e52]:
+                - link "首页" [ref=e53] [cursor=pointer]:
+                  - /url: /
+              - listitem [ref=e54]:
+                - generic [ref=e55]: ›
+                - generic [ref=e56]: Stub 列表
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - heading "Stub 管理" [level=3] [ref=e61]
+              - paragraph [ref=e62]: 管理和监控所有 WireMock stub 映射
+            - generic [ref=e63]:
+              - button "重新加载" [ref=e64]
+              - button "创建 Stub" [ref=e65]
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - textbox "搜索 stub 名称或 URL..." [ref=e70]
+              - button "搜索" [ref=e71]
+            - table [ref=e73]:
+              - rowgroup [ref=e74]:
+                - row "名称 方法 URL 状态 优先级 创建时间 操作" [ref=e75]:
+                  - cell [ref=e76]:
+                    - checkbox [ref=e78]
+                  - cell "名称" [ref=e79]
+                  - cell "方法" [ref=e80]
+                  - cell "URL" [ref=e81]
+                  - cell "状态" [ref=e82]
+                  - cell "优先级" [ref=e83]
+                  - cell "创建时间" [ref=e84]
+                  - cell "操作" [ref=e85]
+              - rowgroup [ref=e86]:
+                - row "暂无 stub 数据" [ref=e87]:
+                  - cell "暂无 stub 数据" [ref=e88]:
+                    - generic [ref=e89]: 暂无 stub 数据
+```
