@@ -1,28 +1,22 @@
 <script setup>
-import { TooltipRoot, TooltipTrigger, TooltipPortal, TooltipContent, TooltipArrow } from 'reka-ui'
+import { TooltipRoot, useForwardPropsEmits } from "reka-ui";
 
 const props = defineProps({
-  content: String,
-  side: {
-    type: String,
-    default: 'top',
-  },
-})
+  defaultOpen: { type: Boolean, required: false },
+  open: { type: Boolean, required: false },
+  delayDuration: { type: Number, required: false },
+  disableHoverableContent: { type: Boolean, required: false },
+  disableClosingTrigger: { type: Boolean, required: false },
+  disabled: { type: Boolean, required: false },
+  ignoreNonKeyboardFocus: { type: Boolean, required: false },
+});
+const emits = defineEmits(["update:open"]);
+
+const forwarded = useForwardPropsEmits(props, emits);
 </script>
 
 <template>
-  <TooltipRoot>
-    <TooltipTrigger as-child>
-      <slot />
-    </TooltipTrigger>
-    <TooltipPortal>
-      <TooltipContent
-        :side="side"
-        class="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
-      >
-        {{ content }}
-        <TooltipArrow class="fill-popover" />
-      </TooltipContent>
-    </TooltipPortal>
+  <TooltipRoot data-slot="tooltip" v-bind="forwarded">
+    <slot />
   </TooltipRoot>
 </template>

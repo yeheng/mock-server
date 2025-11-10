@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
@@ -15,18 +16,24 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:form'])
+// 不向父层发事件，直接就地绑定传入的 form
 
 // HTTP 方法选项
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
 
-// 更新表单数据
-const updateForm = (field, value) => {
-  emit('update:form', {
-    ...props.form,
-    [field]: value,
-  })
-}
+// 直接双向绑定到传入的 form
+const nameProxy = computed({ get: () => props.form.name || '', set: (v) => (props.form.name = v) })
+const descriptionProxy = computed({
+  get: () => props.form.description || '',
+  set: (v) => (props.form.description = v),
+})
+const urlProxy = computed({ get: () => props.form.url || '', set: (v) => (props.form.url = v) })
+const methodProxy = computed({ get: () => props.form.method, set: (v) => (props.form.method = v) })
+const priorityProxy = computed({
+  get: () => props.form.priority,
+  set: (v) => (props.form.priority = Number(v)),
+})
+const enabledProxy = computed({ get: () => !!props.form.enabled, set: (v) => (props.form.enabled = v) })
 </script>
 
 <template>
@@ -40,8 +47,7 @@ const updateForm = (field, value) => {
       <div>
         <label class="block text-sm font-medium mb-2">名称 *</label>
         <Input
-          :value="form.name"
-          @input="updateForm('name', $event.target.value)"
+          v-model="nameProxy"
           placeholder="输入 stub 名称"
           :class="{ 'border-red-500': errors.name }"
         />
@@ -52,12 +58,11 @@ const updateForm = (field, value) => {
 
       <div>
         <label class="block text-sm font-medium mb-2">描述</label>
-        <textarea
-          :value="form.description"
-          @input="updateForm('description', $event.target.value)"
+        <Textarea
+          v-model="descriptionProxy"
           placeholder="输入 stub 描述"
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows="3"
+          class="w-full"
         />
       </div>
 
@@ -66,8 +71,7 @@ const updateForm = (field, value) => {
         <div>
           <label class="block text-sm font-medium mb-2">HTTP 方法 *</label>
           <select
-            :value="form.method"
-            @change="updateForm('method', $event.target.value)"
+            v-model="methodProxy"
             class="w-full px-3 py-2 border rounded-md"
             :class="{ 'border-red-500': errors.method }"
           >
@@ -84,8 +88,7 @@ const updateForm = (field, value) => {
         <div class="col-span-2">
           <label class="block text-sm font-medium mb-2">URL *</label>
           <Input
-            :value="form.url"
-            @input="updateForm('url', $event.target.value)"
+            v-model="urlProxy"
             placeholder="/api/example"
             :class="{ 'border-red-500': errors.url }"
           />
@@ -100,8 +103,7 @@ const updateForm = (field, value) => {
         <div>
           <label class="block text-sm font-medium mb-2">优先级</label>
           <Input
-            :value="form.priority"
-            @input="updateForm('priority', Number($event.target.value))"
+            v-model="priorityProxy"
             type="number"
             min="0"
             placeholder="0"
@@ -114,8 +116,7 @@ const updateForm = (field, value) => {
 
         <div class="flex items-center space-x-2 mt-8">
           <Checkbox
-            :checked="form.enabled"
-            @update:checked="updateForm('enabled', $event)"
+            v-model:checked="enabledProxy"
             id="enabled"
           />
           <label for="enabled" class="text-sm font-medium"> 启用此 stub </label>

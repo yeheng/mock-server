@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -11,139 +11,86 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:form'])
+// 不向父层发事件，直接就地修改传入的 form
 
 // 添加请求头
 const addRequestHeader = () => {
-  const newHeaders = { ...props.form.request?.headers }
-  newHeaders[''] = ''
-  updateForm('request', {
-    ...props.form.request,
-    headers: newHeaders,
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.headers) props.form.request.headers = {}
+  props.form.request.headers[''] = ''
 }
 
 // 添加查询参数
 const addQueryParameter = () => {
-  const newParams = { ...props.form.request?.queryParameters }
-  newParams[''] = ''
-  updateForm('request', {
-    ...props.form.request,
-    queryParameters: newParams,
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.queryParameters) props.form.request.queryParameters = {}
+  props.form.request.queryParameters[''] = ''
 }
 
 // 添加 body pattern
 const addBodyPattern = () => {
-  const newPatterns = [...(props.form.request?.bodyPatterns || [])]
-  newPatterns.push('')
-  updateForm('request', {
-    ...props.form.request,
-    bodyPatterns: newPatterns,
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.bodyPatterns) props.form.request.bodyPatterns = []
+  props.form.request.bodyPatterns.push('')
 }
 
 // 删除请求头
 const removeRequestHeader = (key) => {
-  const newHeaders = { ...props.form.request?.headers }
-  delete newHeaders[key]
-  updateForm('request', {
-    ...props.form.request,
-    headers: newHeaders,
-  })
+  if (!props.form.request?.headers) return
+  delete props.form.request.headers[key]
 }
 
 // 删除查询参数
 const removeQueryParameter = (key) => {
-  const newParams = { ...props.form.request?.queryParameters }
-  delete newParams[key]
-  updateForm('request', {
-    ...props.form.request,
-    queryParameters: newParams,
-  })
+  if (!props.form.request?.queryParameters) return
+  delete props.form.request.queryParameters[key]
 }
 
 // 删除 body pattern
 const removeBodyPattern = (index) => {
-  const newPatterns = [...(props.form.request?.bodyPatterns || [])]
-  newPatterns.splice(index, 1)
-  updateForm('request', {
-    ...props.form.request,
-    bodyPatterns: newPatterns,
-  })
+  if (!props.form.request?.bodyPatterns) return
+  props.form.request.bodyPatterns.splice(index, 1)
 }
 
 // 更新请求头值
 const updateHeaderKey = (oldKey, newKey) => {
   if (oldKey === newKey) return
 
-  const headers = { ...props.form.request?.headers }
-  const value = headers[oldKey]
-
-  delete headers[oldKey]
-  headers[newKey] = value
-
-  updateForm('request', {
-    ...props.form.request,
-    headers,
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.headers) props.form.request.headers = {}
+  const value = props.form.request.headers[oldKey]
+  delete props.form.request.headers[oldKey]
+  props.form.request.headers[newKey] = value
 }
 
 // 更新请求头值
 const updateHeaderValue = (key, value) => {
-  updateForm('request', {
-    ...props.form.request,
-    headers: {
-      ...props.form.request?.headers,
-      [key]: value,
-    },
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.headers) props.form.request.headers = {}
+  props.form.request.headers[key] = value
 }
 
 // 更新查询参数键
 const updateQueryKey = (oldKey, newKey) => {
   if (oldKey === newKey) return
 
-  const params = { ...props.form.request?.queryParameters }
-  const value = params[oldKey]
-
-  delete params[oldKey]
-  params[newKey] = value
-
-  updateForm('request', {
-    ...props.form.request,
-    queryParameters: params,
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.queryParameters) props.form.request.queryParameters = {}
+  const value = props.form.request.queryParameters[oldKey]
+  delete props.form.request.queryParameters[oldKey]
+  props.form.request.queryParameters[newKey] = value
 }
 
 // 更新查询参数值
 const updateQueryValue = (key, value) => {
-  updateForm('request', {
-    ...props.form.request,
-    queryParameters: {
-      ...props.form.request?.queryParameters,
-      [key]: value,
-    },
-  })
+  if (!props.form.request) props.form.request = { headers: {}, queryParameters: {}, bodyPatterns: [] }
+  if (!props.form.request.queryParameters) props.form.request.queryParameters = {}
+  props.form.request.queryParameters[key] = value
 }
 
-// 更新 body pattern
-const updateBodyPattern = (index, value) => {
-  const patterns = [...(props.form.request?.bodyPatterns || [])]
-  patterns[index] = value
-  updateForm('request', {
-    ...props.form.request,
-    bodyPatterns: patterns,
-  })
-}
+// 保持就地更新，避免函数调用形式的 v-model 表达式
 
-// 更新表单
-const updateForm = (field, value) => {
-  emit('update:form', {
-    ...props.form,
-    [field]: value,
-  })
-}
+// 无需更新到父层，直接改 props.form（输入即内存）
 </script>
 
 <template>
@@ -239,8 +186,7 @@ const updateForm = (field, value) => {
             class="flex items-center space-x-2"
           >
             <Input
-              :value="pattern"
-              @input="updateBodyPattern(index, $event.target.value)"
+              v-model="form.request.bodyPatterns[index]"
               placeholder="输入 JSONPath 或正则表达式"
               class="flex-1"
             />

@@ -12,86 +12,68 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:form'])
+// 不向父层发事件，直接就地修改传入的 form
 
 // 添加响应头
 const addResponseHeader = () => {
-  const newHeaders = { ...props.form.response?.headers }
-  newHeaders[''] = ''
-  updateForm('response', {
-    ...props.form.response,
-    headers: newHeaders,
-  })
+  if (!props.form.response) props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+  if (!props.form.response.headers) props.form.response.headers = {}
+  props.form.response.headers[''] = ''
 }
 
 // 删除响应头
 const removeResponseHeader = (key) => {
-  const newHeaders = { ...props.form.response?.headers }
-  delete newHeaders[key]
-  updateForm('response', {
-    ...props.form.response,
-    headers: newHeaders,
-  })
+  if (!props.form.response?.headers) return
+  delete props.form.response.headers[key]
 }
 
 // 更新响应头键
 const updateHeaderKey = (oldKey, newKey) => {
   if (oldKey === newKey) return
 
-  const headers = { ...props.form.response?.headers }
-  const value = headers[oldKey]
-
-  delete headers[oldKey]
-  headers[newKey] = value
-
-  updateForm('response', {
-    ...props.form.response,
-    headers,
-  })
+  if (!props.form.response) props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+  if (!props.form.response.headers) props.form.response.headers = {}
+  const value = props.form.response.headers[oldKey]
+  delete props.form.response.headers[oldKey]
+  props.form.response.headers[newKey] = value
 }
 
 // 更新响应头值
 const updateHeaderValue = (key, value) => {
-  updateForm('response', {
-    ...props.form.response,
-    headers: {
-      ...props.form.response?.headers,
-      [key]: value,
-    },
-  })
+  if (!props.form.response) props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+  if (!props.form.response.headers) props.form.response.headers = {}
+  props.form.response.headers[key] = value
 }
 
-// 更新响应体
-const updateBody = (value) => {
-  updateForm('response', {
-    ...props.form.response,
-    body: value,
-  })
-}
+// v-model 代理：状态码 / 响应体 / 文件名
+const statusProxy = computed({
+  get: () => props.form.response?.status ?? 200,
+  set: (v) => {
+    if (!props.form.response)
+      props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+    props.form.response.status = Number(v)
+  },
+})
 
-// 更新 bodyFileName
-const updateBodyFileName = (value) => {
-  updateForm('response', {
-    ...props.form.response,
-    bodyFileName: value,
-  })
-}
+const bodyProxy = computed({
+  get: () => props.form.response?.body ?? '',
+  set: (v) => {
+    if (!props.form.response)
+      props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+    props.form.response.body = v
+  },
+})
 
-// 更新状态码
-const updateStatus = (value) => {
-  updateForm('response', {
-    ...props.form.response,
-    status: Number(value),
-  })
-}
+const bodyFileNameProxy = computed({
+  get: () => props.form.response?.bodyFileName ?? null,
+  set: (v) => {
+    if (!props.form.response)
+      props.form.response = { status: 200, headers: {}, body: '', bodyFileName: null }
+    props.form.response.bodyFileName = v
+  },
+})
 
-// 更新表单
-const updateForm = (field, value) => {
-  emit('update:form', {
-    ...props.form,
-    [field]: value,
-  })
-}
+// 无需向父层发事件，直接改 props.form（输入即内存）
 </script>
 
 <template>
@@ -106,8 +88,7 @@ const updateForm = (field, value) => {
         <div>
           <label class="block text-sm font-medium mb-2">状态码 *</label>
           <Input
-            :value="form.response?.status"
-            @input="updateStatus($event.target.value)"
+            v-model="statusProxy"
             type="number"
             min="100"
             max="599"
@@ -123,7 +104,7 @@ const updateForm = (field, value) => {
               :key="code"
               size="sm"
               variant="outline"
-              @click="updateStatus(code)"
+              @click="statusProxy = code"
             >
               {{ code }}
             </Button>
@@ -174,12 +155,12 @@ const updateForm = (field, value) => {
             <input
               type="radio"
               :checked="!form.response?.bodyFileName"
-              @change="updateBodyFileName(null)"
+              @change="bodyFileNameProxy = null"
             />
             <span class="text-sm">直接响应体</span>
           </label>
           <label class="flex items-center space-x-2 cursor-pointer">
-            <input type="radio" :checked="!!form.response?.bodyFileName" @change="updateBody('')" />
+            <input type="radio" :checked="!!form.response?.bodyFileName" @change="bodyProxy = ''" />
             <span class="text-sm">文件响应体</span>
           </label>
         </div>
@@ -189,8 +170,7 @@ const updateForm = (field, value) => {
       <div v-if="!form.response?.bodyFileName">
         <label class="block text-sm font-medium mb-2">响应体内容</label>
         <Textarea
-          :value="form.response?.body"
-          @input="updateBody($event.target.value)"
+          v-model="bodyProxy"
           placeholder="输入 JSON、XML 或纯文本响应体"
           rows="8"
           class="w-full"
@@ -202,8 +182,7 @@ const updateForm = (field, value) => {
       <div v-else>
         <label class="block text-sm font-medium mb-2">响应体文件名</label>
         <Input
-          :value="form.response?.bodyFileName"
-          @input="updateBodyFileName($event.target.value)"
+          v-model="bodyFileNameProxy"
           placeholder="例如: response.json"
           class="w-full"
         />

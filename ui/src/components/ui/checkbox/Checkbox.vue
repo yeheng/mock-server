@@ -1,35 +1,46 @@
 <script setup>
-import { computed } from 'vue'
+import { reactiveOmit } from "@vueuse/core";
+import { Check } from "lucide-vue-next";
+import { CheckboxIndicator, CheckboxRoot, useForwardPropsEmits } from "reka-ui";
+import { cn } from "@/lib/utils";
 
 const props = defineProps({
-  modelValue: Boolean,
-  disabled: Boolean,
-  id: String,
-})
+  defaultValue: { type: [Boolean, String], required: false },
+  modelValue: { type: [Boolean, String, null], required: false },
+  disabled: { type: Boolean, required: false },
+  value: { type: null, required: false },
+  id: { type: String, required: false },
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+  name: { type: String, required: false },
+  required: { type: Boolean, required: false },
+  class: { type: null, required: false },
+});
+const emits = defineEmits(["update:modelValue"]);
 
-const emit = defineEmits(['update:modelValue'])
+const delegatedProps = reactiveOmit(props, "class");
 
-const isChecked = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value),
-})
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
-  <div class="flex items-center space-x-2">
-    <input
-      v-model="isChecked"
-      :id="id"
-      type="checkbox"
-      :disabled="disabled"
-      class="h-4 w-4 rounded border border-primary text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-    />
-    <label
-      v-if="$slots.default"
-      :for="id"
-      class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+  <CheckboxRoot
+    data-slot="checkbox"
+    v-bind="forwarded"
+    :class="
+      cn(
+        'peer border-input data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+        props.class,
+      )
+    "
+  >
+    <CheckboxIndicator
+      data-slot="checkbox-indicator"
+      class="grid place-content-center text-current transition-none"
     >
-      <slot></slot>
-    </label>
-  </div>
+      <slot>
+        <Check class="size-3.5" />
+      </slot>
+    </CheckboxIndicator>
+  </CheckboxRoot>
 </template>

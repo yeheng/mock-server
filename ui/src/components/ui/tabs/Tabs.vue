@@ -1,38 +1,31 @@
 <script setup>
-import { provide, ref, computed } from 'vue'
+import { reactiveOmit } from "@vueuse/core";
+import { TabsRoot, useForwardPropsEmits } from "reka-ui";
+import { cn } from "@/lib/utils";
 
 const props = defineProps({
-  modelValue: String,
-  defaultValue: String,
-})
+  defaultValue: { type: null, required: false },
+  orientation: { type: String, required: false },
+  dir: { type: String, required: false },
+  activationMode: { type: String, required: false },
+  modelValue: { type: null, required: false },
+  unmountOnHide: { type: Boolean, required: false },
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+  class: { type: null, required: false },
+});
+const emits = defineEmits(["update:modelValue"]);
 
-const emit = defineEmits(['update:modelValue'])
-
-const activeTab = ref(props.modelValue || props.defaultValue)
-
-const tabs = ref([])
-
-const setActiveTab = (value) => {
-  activeTab.value = value
-  emit('update:modelValue', value)
-}
-
-provide('tabsContext', {
-  tabs,
-  activeTab,
-  setActiveTab,
-})
+const delegatedProps = reactiveOmit(props, "class");
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
-  <div class="w-full">
-    <div class="border-b border-border">
-      <nav class="-mb-px flex space-x-8">
-        <slot name="tabs"></slot>
-      </nav>
-    </div>
-    <div class="mt-4">
-      <slot></slot>
-    </div>
-  </div>
+  <TabsRoot
+    data-slot="tabs"
+    v-bind="forwarded"
+    :class="cn('flex flex-col gap-2', props.class)"
+  >
+    <slot />
+  </TabsRoot>
 </template>

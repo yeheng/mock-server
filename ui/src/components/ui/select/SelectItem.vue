@@ -1,23 +1,45 @@
 <script setup>
-import { SelectItem, SelectItemText, SelectItemIndicator } from 'reka-ui'
+import { reactiveOmit } from "@vueuse/core";
+import { Check } from "lucide-vue-next";
+import {
+  SelectItem,
+  SelectItemIndicator,
+  SelectItemText,
+  useForwardProps,
+} from "reka-ui";
+import { cn } from "@/lib/utils";
 
 const props = defineProps({
-  value: String,
-  disabled: Boolean,
-})
+  value: { type: null, required: true },
+  disabled: { type: Boolean, required: false },
+  textValue: { type: String, required: false },
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+  class: { type: null, required: false },
+});
+
+const delegatedProps = reactiveOmit(props, "class");
+
+const forwardedProps = useForwardProps(delegatedProps);
 </script>
 
 <template>
   <SelectItem
-    :value="value"
-    :disabled="disabled"
-    class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+    data-slot="select-item"
+    v-bind="forwardedProps"
+    :class="
+      cn(
+        'focus:bg-accent focus:text-accent-foreground [&_svg:not([class*=\'text-\'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2',
+        props.class,
+      )
+    "
   >
-    <SelectItemIndicator class="absolute left-2 inline-flex items-center justify-center">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-      </svg>
-    </SelectItemIndicator>
+    <span class="absolute right-2 flex size-3.5 items-center justify-center">
+      <SelectItemIndicator>
+        <Check class="size-4" />
+      </SelectItemIndicator>
+    </span>
+
     <SelectItemText>
       <slot />
     </SelectItemText>

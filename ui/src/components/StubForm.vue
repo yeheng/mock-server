@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
-import { Tabs, Tab, TabPanel } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import StubBasicInfo from './StubBasicInfo.vue'
 import StubRequestConfig from './StubRequestConfig.vue'
 import StubResponseConfig from './StubResponseConfig.vue'
@@ -95,9 +95,42 @@ function resetForm() {
   activeTab.value = 'basic'
 }
 
-// 更新表单数据
+// 更新表单数据（浅合并以减少整体重渲染开销）
 const updateForm = (newForm) => {
-  form.value = newForm
+  const current = form.value
+  // 顶层简单字段
+  const simpleKeys = ['id', 'name', 'description', 'method', 'url', 'enabled', 'priority']
+  for (const key of simpleKeys) {
+    if (Object.prototype.hasOwnProperty.call(newForm, key) && newForm[key] !== current[key]) {
+      current[key] = newForm[key]
+    }
+  }
+
+  // request 字段浅合并
+  if (newForm.request && typeof newForm.request === 'object') {
+    if (!current.request || typeof current.request !== 'object') {
+      current.request = {}
+    }
+    for (const k of Object.keys(newForm.request)) {
+      const nv = newForm.request[k]
+      if (nv !== current.request[k]) {
+        current.request[k] = nv
+      }
+    }
+  }
+
+  // response 字段浅合并
+  if (newForm.response && typeof newForm.response === 'object') {
+    if (!current.response || typeof current.response !== 'object') {
+      current.response = {}
+    }
+    for (const k of Object.keys(newForm.response)) {
+      const nv = newForm.response[k]
+      if (nv !== current.response[k]) {
+        current.response[k] = nv
+      }
+    }
+  }
 }
 
 // 验证表单
@@ -163,28 +196,30 @@ const handleClose = () => {
 
     <div class="space-y-6">
       <!-- 基本信息 -->
-      <StubBasicInfo :form="form" :errors="errors" @update:form="updateForm" />
+      <StubBasicInfo :form="form" :errors="errors" />
 
       <!-- 请求和响应配置 -->
       <Tabs v-model="activeTab">
-        <Tab value="request" label="请求匹配" />
-        <Tab value="response" label="响应配置" />
-        <Tab value="advanced" label="高级配置" />
+        <TabsList>
+          <TabsTrigger value="request">请求匹配</TabsTrigger>
+          <TabsTrigger value="response">响应配置</TabsTrigger>
+          <TabsTrigger value="advanced">高级配置</TabsTrigger>
+        </TabsList>
 
         <!-- 请求匹配 -->
-        <TabPanel value="request">
-          <StubRequestConfig :form="form" @update:form="updateForm" />
-        </TabPanel>
+        <TabsContent value="request">
+          <StubRequestConfig :form="form" />
+        </TabsContent>
 
         <!-- 响应配置 -->
-        <TabPanel value="response">
-          <StubResponseConfig :form="form" @update:form="updateForm" />
-        </TabPanel>
+        <TabsContent value="response">
+          <StubResponseConfig :form="form" />
+        </TabsContent>
 
         <!-- 高级配置 -->
-        <TabPanel value="advanced">
+        <TabsContent value="advanced">
           <div class="text-center py-8 text-gray-500">高级配置功能开发中...</div>
-        </TabPanel>
+        </TabsContent>
       </Tabs>
     </div>
 

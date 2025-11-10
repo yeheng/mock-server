@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
-import { Tabs, Tab, TabPanel } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 const emit = defineEmits(['close', 'edit'])
 
@@ -259,13 +259,15 @@ const testStub = async () => {
 
         <!-- 详细信息标签页 -->
         <Tabs v-model="activeTab">
-          <Tab value="overview" label="概览" />
-          <Tab value="request" label="请求匹配" />
-          <Tab value="response" label="响应配置" />
-          <Tab value="metadata" label="元数据" />
+          <TabsList>
+            <TabsTrigger value="overview">概览</TabsTrigger>
+            <TabsTrigger value="request">请求匹配</TabsTrigger>
+            <TabsTrigger value="response">响应配置</TabsTrigger>
+            <TabsTrigger value="metadata">元数据</TabsTrigger>
+          </TabsList>
 
           <!-- 概览 -->
-          <TabPanel value="overview">
+          <TabsContent value="overview">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
@@ -319,10 +321,10 @@ const testStub = async () => {
                 </CardContent>
               </Card>
             </div>
-          </TabPanel>
+          </TabsContent>
 
           <!-- 请求匹配 -->
-          <TabPanel value="request">
+          <TabsContent value="request">
             <div class="space-y-6">
               <Card>
                 <CardHeader>
@@ -402,10 +404,10 @@ const testStub = async () => {
                 </CardContent>
               </Card>
             </div>
-          </TabPanel>
+          </TabsContent>
 
           <!-- 响应配置 -->
-          <TabPanel value="response">
+          <TabsContent value="response">
             <div class="space-y-6">
               <Card>
                 <CardHeader>
@@ -475,10 +477,10 @@ const testStub = async () => {
                 </CardContent>
               </Card>
             </div>
-          </TabPanel>
+          </TabsContent>
 
           <!-- 元数据 -->
-          <TabPanel value="metadata">
+          <TabsContent value="metadata">
             <Card>
               <CardHeader>
                 <CardTitle>完整的 Stub 配置</CardTitle>
@@ -490,7 +492,7 @@ const testStub = async () => {
                 </pre>
               </CardContent>
             </Card>
-          </TabPanel>
+          </TabsContent>
         </Tabs>
       </div>
 

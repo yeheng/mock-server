@@ -12,8 +12,10 @@ export { default as Badge } from './badge/Badge.vue'
 
 // 导航组件
 export { default as Tabs } from './tabs/Tabs.vue'
-export { default as Tab } from './tabs/Tab.vue'
-export { default as TabPanel } from './tabs/TabPanel.vue'
+export { default as TabsContent } from './tabs/TabsContent.vue'
+export { default as TabsList } from './tabs/TabsList.vue'
+export { default as TabsTrigger } from './tabs/TabsTrigger.vue' 
+
 
 // 数据展示组件
 export { default as Table } from './table/Table.vue'
