@@ -3,14 +3,19 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import StubDetails from '@/components/StubDetails.vue'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import QuickStubForm from '@/components/QuickStubForm.vue'
+import StubImportExport from '@/components/StubImportExport.vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const stubsStore = useStubsStore()
 const editingStub = ref(null)
 const viewingStub = ref(null)
 const showDetails = ref(false)
+const showQuickCreate = ref(false)
+const showImportExport = ref(false)
 const route = useRoute()
 const router = useRouter()
 
@@ -44,6 +49,27 @@ const navigateTo = (to) => {
 const handleCreateStub = () => {
   editingStub.value = null
   router.push('/stubs/create')
+}
+
+// 快速创建 stub
+const handleQuickCreate = () => {
+  showQuickCreate.value = true
+}
+
+// 导入导出
+const handleImportExport = () => {
+  showImportExport.value = true
+}
+
+// 快速创建完成
+const handleQuickCreateSaved = () => {
+  showQuickCreate.value = false
+  // 可以在这里添加成功提示
+}
+
+// 快速创建关闭
+const handleQuickCreateClose = () => {
+  showQuickCreate.value = false
 }
 
 // 编辑 stub
@@ -104,9 +130,17 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
 
           <!-- 右侧操作 -->
           <div class="flex items-center space-x-2">
+            <Button @click="handleQuickCreate" variant="outline" size="sm">
+              <span class="mr-1">⚡</span>
+              快速创建
+            </Button>
+            <Button @click="handleImportExport" variant="outline" size="sm">
+              <span class="mr-1">📤</span>
+              导入导出
+            </Button>
             <Button @click="handleCreateStub" size="sm" class="bg-blue-600 hover:bg-blue-700">
               <span class="mr-1">➕</span>
-              创建 Stub
+              完整创建
             </Button>
           </div>
         </div>
@@ -200,6 +234,29 @@ const wiremockStatus = ref('connected') // 'connected', 'disconnected', 'error'
       @close="handleDetailsClose"
       @edit="handleDetailsEdit"
     />
+
+    <!-- 快速创建对话框 -->
+    <Dialog :open="showQuickCreate" @update:open="val => showQuickCreate = val">
+      <DialogContent class="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>快速创建 Stub</DialogTitle>
+        </DialogHeader>
+        <QuickStubForm 
+          @saved="handleQuickCreateSaved" 
+          @close="handleQuickCreateClose" 
+        />
+      </DialogContent>
+    </Dialog>
+
+    <!-- 导入导出对话框 -->
+    <Dialog :open="showImportExport" @update:open="val => showImportExport = val">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>导入导出 Stub</DialogTitle>
+        </DialogHeader>
+        <StubImportExport />
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
