@@ -2,9 +2,7 @@
 import { ref } from 'vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/toast/use-toast'
-
-const { toast } = useToast()
+// Toast 功能暂时移除，使用 console.log 替代
 const stubsStore = useStubsStore()
 const isLoading = ref(false)
 
@@ -14,11 +12,7 @@ const handleImport = async (event) => {
   if (!file) return
 
   if (!file.name.endsWith('.json')) {
-    toast({
-      title: '错误',
-      description: '只支持 JSON 文件',
-      variant: 'destructive'
-    })
+    console.error('只支持 JSON 文件')
     return
   }
 
@@ -71,18 +65,11 @@ const handleImport = async (event) => {
       }
     }
     
-    toast({
-      title: '导入完成',
-      description: `成功导入 ${importedCount} 个 stub，跳过 ${skippedCount} 个`
-    })
+    console.log(`导入完成: 成功导入 ${importedCount} 个 stub，跳过 ${skippedCount} 个`)
     
   } catch (error) {
     console.error('Import failed:', error)
-    toast({
-      title: '导入失败',
-      description: error.message,
-      variant: 'destructive'
-    })
+    console.error('导入失败:', error.message)
   } finally {
     isLoading.value = false
     // 清空 file input
@@ -93,10 +80,7 @@ const handleImport = async (event) => {
 // 导出 stub
 const handleExport = async () => {
   if (stubsStore.stubs.length === 0) {
-    toast({
-      title: '提示',
-      description: '没有 stub 可导出'
-    })
+    console.log('没有 stub 可导出')
     return
   }
 
@@ -129,18 +113,11 @@ const handleExport = async () => {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     
-    toast({
-      title: '导出成功',
-      description: `已导出 ${stubsStore.stubs.length} 个 stub`
-    })
+    console.log(`导出成功: 已导出 ${stubsStore.stubs.length} 个 stub`)
     
   } catch (error) {
     console.error('Export failed:', error)
-    toast({
-      title: '导出失败',
-      description: error.message,
-      variant: 'destructive'
-    })
+    console.error('导出失败:', error.message)
   } finally {
     isLoading.value = false
   }
@@ -190,11 +167,7 @@ const handleExportSelected = async (selectedStubs) => {
     
   } catch (error) {
     console.error('Export selected failed:', error)
-    toast({
-      title: '导出失败',
-      description: error.message,
-      variant: 'destructive'
-    })
+    console.error('导出失败:', error.message)
   } finally {
     isLoading.value = false
   }

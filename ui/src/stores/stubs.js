@@ -5,7 +5,7 @@ import { handleApiError } from '@/lib/errorHandler'
 export const useStubsStore = defineStore('stubs', () => {
   const stubs = ref([])
   const loading = ref(false)
-  const currentPage = ref(1)
+  const currentPage = ref(0)
   const pageSize = ref(10)
   const totalElements = ref(0)
   const searchKeyword = ref('')
@@ -20,7 +20,7 @@ export const useStubsStore = defineStore('stubs', () => {
   const hasPreviousPage = computed(() => currentPage.value > 1)
 
   // 获取所有stubs
-  const fetchStubs = async (page = 1, size = 10, keyword = '') => {
+  const fetchStubs = async (page = 0, size = 10, keyword = '') => {
     loading.value = true
     try {
       const params = new URLSearchParams({
@@ -39,7 +39,7 @@ export const useStubsStore = defineStore('stubs', () => {
       const data = await response.json()
       stubs.value = data.content
       totalElements.value = data.totalElements
-      currentPage.value = data.number + 1
+      currentPage.value = data.number
       pageSize.value = data.size
     } catch (error) {
       // 使用统一的错误处理
@@ -55,7 +55,7 @@ export const useStubsStore = defineStore('stubs', () => {
   // 搜索stubs
   const searchStubs = async (keyword) => {
     searchKeyword.value = keyword
-    await fetchStubs(1, pageSize.value, keyword)
+    await fetchStubs(0, pageSize.value, keyword)
   }
 
   // 获取单个stub

@@ -54,7 +54,7 @@ const handlePageChange = (page) => {
 }
 
 const handleSizeChange = (size) => {
-  stubsStore.fetchStubs(1, size, stubsStore.searchKeyword)
+  stubsStore.fetchStubs(0, size, stubsStore.searchKeyword)
 }
 
 // 选择处理

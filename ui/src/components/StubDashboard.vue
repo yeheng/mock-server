@@ -88,7 +88,7 @@ const quickActions = ref([
 // 初始化
 onMounted(async () => {
   await loadStatistics()
-  await stubsStore.fetchStubs(1, 5) // 加载最近的5条记录用于概览
+  await stubsStore.fetchStubs(0, 5) // 加载最近的5条记录用于概览
 })
 
 // 加载统计数据

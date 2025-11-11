@@ -53,13 +53,7 @@ const handleSave = async () => {
       url: form.url,
       enabled: form.enabled,
       priority: 0,
-      response: {
-        status: form.status,
-        body: form.body,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+      responseDefinition: form.body
     }
 
     await stubsStore.createStub(stubData)
