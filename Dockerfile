@@ -53,6 +53,9 @@ USER appuser
 # Spring Boot 应用默认运行在 8080 端口
 EXPOSE 8080
 
+# 添加卷映射，持久化数据
+VOLUME ["/app/data", "/app/logs"]
+
 # 添加健康检查
 # 这有助于容器编排系统了解应用的健康状态
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

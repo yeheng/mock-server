@@ -7,8 +7,6 @@ server:
     threads:
       # IO线程数 = CPU核心数
       io: 4
-      # 工作线程数交给Virtual Threads管理，不设置上限
-      worker: 200
     # 缓冲区配置（减少内存分配）
     buffer-size: 16384
     direct-buffers: true
@@ -23,30 +21,6 @@ spring:
   application:
     name: wiremock-ui-manager
 
-  # H2 数据库配置
-  datasource:
-    url: jdbc:h2:mem:wiremockdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: password
-
-  # JPA 配置
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
-        format_sql: false
-        use_sql_comments: false
-
-  # H2 控制台 (开发环境)
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
   # JSON 配置
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -54,15 +28,15 @@ spring:
     indentation:
       enabled: true
 
-# 管理端点配置
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+        use_sql_comments: false
+
+# 管理端点基础配置
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when-authorized
   info:
     env:
       enabled: true
@@ -73,9 +47,6 @@ management:
 
 # 日志配置
 logging:
-  level:
-    io.github.yeheng.wiremock: DEBUG
-    org.springframework.web: DEBUG
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
