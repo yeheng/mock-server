@@ -1,12 +1,11 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useStubsStore } from '@/stores/stubs'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Pagination } from '@/components/ui/pagination'
 import { AlertDialog } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Pagination } from '@/components/ui/pagination'
 import {
   Table,
   TableBody,
@@ -15,28 +14,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { useStubsStore } from '@/stores/stubs'
+import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits(['edit', 'create', 'view-details'])
-
 const stubsStore = useStubsStore()
+const stubImportExportRef = ref(null)
 
-// 本地状态
+// 本地状态 - 保持最小化，只保留UI相关状态
 const searchInput = ref('')
 const isDeleting = ref(false)
 const showDeleteConfirm = ref(false)
 const stubToDelete = ref(null)
+const showBatchDeleteConfirm = ref(false)
 
-// 计算属性
-const selectedStubsList = computed(() => Array.from(stubsStore.selectedStubs))
+// 计算属性 - 直接从store的state获取
+const selectedStubsList = computed(() => Array.from(stubsStore.state.value.selectedStubs))
 
-const allVisibleSelected = computed(
-  () =>
-    stubsStore.stubs.length > 0 &&
-    stubsStore.stubs.every((stub) => stubsStore.selectedStubs.has(stub.id))
-)
+const allVisibleSelected = computed(() => stubsStore.allVisibleSelected.value)
 
-const hasSelection = computed(() => stubsStore.selectedStubs.size > 0)
+const hasSelection = computed(() => stubsStore.state.value.selectedStubs.size > 0)
 
 // 初始化
 onMounted(async () => {
@@ -48,22 +45,18 @@ const handleSearch = async () => {
   await stubsStore.searchStubs(searchInput.value)
 }
 
-// 分页处理
+// 分页处理 - 使用store的state
 const handlePageChange = (page) => {
-  stubsStore.fetchStubs(page, stubsStore.pageSize, stubsStore.searchKeyword)
+  stubsStore.fetchStubs(page, stubsStore.state.value.pagination.size, stubsStore.state.value.searchKeyword)
 }
 
 const handleSizeChange = (size) => {
-  stubsStore.fetchStubs(0, size, stubsStore.searchKeyword)
+  stubsStore.fetchStubs(0, size, stubsStore.state.value.searchKeyword)
 }
 
-// 选择处理
+// 选择处理 - 简化逻辑
 const handleSelectStub = (id) => {
-  if (stubsStore.selectedStubs.has(id)) {
-    stubsStore.deselectStub(id)
-  } else {
-    stubsStore.selectStub(id)
-  }
+  stubsStore.isSelected(id) ? stubsStore.deselectStub(id) : stubsStore.selectStub(id)
 }
 
 const handleSelectAll = () => {
@@ -74,14 +67,8 @@ const handleSelectAll = () => {
   }
 }
 
-// 操作处理
-const handleToggle = async (id) => {
-  try {
-    await stubsStore.toggleStub(id)
-  } catch (error) {
-    console.error('Failed to toggle stub:', error)
-  }
-}
+// 操作处理 - 简化try-catch，保持简洁
+const handleToggle = (id) => stubsStore.toggleStub(id)
 
 const handleDeleteClick = (stub) => {
   stubToDelete.value = stub
@@ -92,14 +79,9 @@ const confirmDelete = async () => {
   if (!stubToDelete.value) return
 
   isDeleting.value = true
-  try {
-    await stubsStore.deleteStub(stubToDelete.value.id)
-    stubToDelete.value = null
-  } catch (error) {
-    console.error('Failed to delete stub:', error)
-  } finally {
-    isDeleting.value = false
-  }
+  await stubsStore.deleteStub(stubToDelete.value.id)
+  stubToDelete.value = null
+  isDeleting.value = false
 }
 
 const cancelDelete = () => {
@@ -121,46 +103,46 @@ const handleCreate = () => {
 // 批量操作
 const handleBatchDelete = async () => {
   if (selectedStubsList.value.length === 0) return
+  showBatchDeleteConfirm.value = true
+}
 
-  if (confirm(`确定要删除选中的 ${selectedStubsList.value.length} 个stub吗？`)) {
-    try {
-      await stubsStore.batchDeleteStubs(selectedStubsList.value)
-      stubsStore.clearSelection()
-    } catch (error) {
-      console.error('Failed to batch delete stubs:', error)
-    }
+const confirmBatchDelete = async () => {
+  if (selectedStubsList.value.length === 0) return
+
+  isDeleting.value = true
+  await stubsStore.batchDeleteStubs(selectedStubsList.value)
+  stubsStore.clearSelection()
+  showBatchDeleteConfirm.value = false
+  isDeleting.value = false
+}
+
+const cancelBatchDelete = () => {
+  showBatchDeleteConfirm.value = false
+}
+
+// 批量导出 - 简化逻辑
+const handleBatchExport = () => {
+  const selectedStubs = stubsStore.state.value.stubs.filter(stub => stubsStore.isSelected(stub.id))
+  if (stubImportExportRef.value && selectedStubs.length > 0) {
+    stubImportExportRef.value.handleExportSelected(selectedStubs)
   }
 }
 
 const handleBatchEnable = async () => {
   if (selectedStubsList.value.length === 0) return
 
-  try {
-    await stubsStore.batchToggleStubs(selectedStubsList.value, true)
-    stubsStore.clearSelection()
-  } catch (error) {
-    console.error('Failed to batch enable stubs:', error)
-  }
+  await stubsStore.batchToggleStubs(selectedStubsList.value, true)
+  stubsStore.clearSelection()
 }
 
 const handleBatchDisable = async () => {
   if (selectedStubsList.value.length === 0) return
 
-  try {
-    await stubsStore.batchToggleStubs(selectedStubsList.value, false)
-    stubsStore.clearSelection()
-  } catch (error) {
-    console.error('Failed to batch disable stubs:', error)
-  }
+  await stubsStore.batchToggleStubs(selectedStubsList.value, false)
+  stubsStore.clearSelection()
 }
 
-const handleReload = async () => {
-  try {
-    await stubsStore.reloadAllStubs()
-  } catch (error) {
-    console.error('Failed to reload stubs:', error)
-  }
-}
+const handleReload = () => stubsStore.reloadAllStubs()
 
 // 获取状态徽章样式
 const getStatusBadge = (enabled) => {
@@ -223,6 +205,7 @@ const formatDate = (dateString) => {
         </span>
         <Button size="sm" variant="outline" @click="handleBatchEnable"> 批量启用 </Button>
         <Button size="sm" variant="outline" @click="handleBatchDisable"> 批量禁用 </Button>
+        <Button size="sm" variant="outline" @click="handleBatchExport"> 批量导出 </Button>
         <Button size="sm" variant="destructive" @click="handleBatchDelete"> 批量删除 </Button>
         <Button size="sm" variant="ghost" @click="stubsStore.clearSelection()"> 取消选择 </Button>
       </div>
@@ -244,8 +227,8 @@ const formatDate = (dateString) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <template v-if="stubsStore.stubs.length > 0">
-            <TableRow v-for="stub in stubsStore.stubs" :key="stub.id">
+          <template v-if="stubsStore.state.value.stubs.length > 0">
+            <TableRow v-for="stub in stubsStore.state.value.stubs" :key="stub.id">
               <TableCell>
                 <Checkbox
                   :model-value="stubsStore.isSelected(stub.id)"
@@ -301,7 +284,7 @@ const formatDate = (dateString) => {
                     size="sm"
                     variant="outline"
                     @click="handleToggle(stub.id)"
-                    :disabled="stubsStore.loading"
+                    :disabled="stubsStore.state.value.loading"
                     :title="stub.enabled ? '禁用' : '启用'"
                   >
                     {{ stub.enabled ? '禁用' : '启用' }}
@@ -322,7 +305,7 @@ const formatDate = (dateString) => {
           <TableRow v-else>
             <TableCell colspan="8" class="text-center py-8">
               <div class="text-muted-foreground">
-                {{ stubsStore.searchKeyword ? '未找到匹配的 stub' : '暂无 stub 数据' }}
+                {{ stubsStore.state.value.searchKeyword ? '未找到匹配的 stub' : '暂无 stub 数据' }}
               </div>
             </TableCell>
           </TableRow>
@@ -331,11 +314,11 @@ const formatDate = (dateString) => {
 
       <!-- 分页 -->
       <Pagination
-        v-if="stubsStore.totalElements > 0"
-        :current-page="stubsStore.currentPage"
+        v-if="stubsStore.state.value.pagination.total > 0"
+        :current-page="stubsStore.state.value.pagination.current"
         :total-pages="stubsStore.totalPages"
-        :total-elements="stubsStore.totalElements"
-        :page-size="stubsStore.pageSize"
+        :total-elements="stubsStore.state.value.pagination.total"
+        :page-size="stubsStore.state.value.pagination.size"
         :has-next-page="stubsStore.hasNextPage"
         :has-previous-page="stubsStore.hasPreviousPage"
         @page-change="handlePageChange"
@@ -344,7 +327,7 @@ const formatDate = (dateString) => {
     </CardContent>
   </Card>
 
-  <!-- 删除确认模态框 -->
+  <!-- 单个删除确认模态框 -->
   <AlertDialog
     :open="showDeleteConfirm"
     :title="`确认删除 stub: ${stubToDelete?.name}`"
@@ -357,6 +340,27 @@ const formatDate = (dateString) => {
     </template>
     <template #cancel>
       <Button variant="outline" @click="cancelDelete"> 取消 </Button>
+    </template>
+    <template #confirm>
+      <Button variant="destructive" :disabled="isDeleting">
+        {{ isDeleting ? '删除中...' : '确认删除' }}
+      </Button>
+    </template>
+  </AlertDialog>
+
+  <!-- 批量删除确认模态框 -->
+  <AlertDialog
+    :open="showBatchDeleteConfirm"
+    title="确认批量删除"
+    :description="`确定要删除选中的 ${selectedStubsList.length} 个stub吗？此操作不可撤销。`"
+    @update:open="(open) => (showBatchDeleteConfirm = open)"
+    @confirm="confirmBatchDelete"
+  >
+    <template #trigger>
+      <span></span>
+    </template>
+    <template #cancel>
+      <Button variant="outline" @click="cancelBatchDelete"> 取消 </Button>
     </template>
     <template #confirm>
       <Button variant="destructive" :disabled="isDeleting">

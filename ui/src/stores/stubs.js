@@ -3,25 +3,37 @@ import { ref, computed } from 'vue'
 import { handleApiError } from '@/lib/errorHandler'
 
 export const useStubsStore = defineStore('stubs', () => {
-  const stubs = ref([])
-  const loading = ref(false)
-  const currentPage = ref(0)
-  const pageSize = ref(10)
-  const totalElements = ref(0)
-  const searchKeyword = ref('')
-  const selectedStubs = ref(new Set())
+  // 统一状态管理 - 替代分散的多个ref
+  const state = ref({
+    stubs: [],
+    pagination: {
+      current: 0,
+      size: 10,
+      total: 0
+    },
+    searchKeyword: '',
+    selectedStubs: new Set(),
+    loading: false,
+    error: null
+  })
 
   // API基础URL
   const API_BASE = '/admin/stubs'
 
-  // 计算属性
-  const totalPages = computed(() => Math.ceil(totalElements.value / pageSize.value))
-  const hasNextPage = computed(() => currentPage.value < totalPages.value)
-  const hasPreviousPage = computed(() => currentPage.value > 1)
+  // 计算属性 - 直接从state中获取
+  const totalPages = computed(() => Math.ceil(state.value.pagination.total / state.value.pagination.size))
+  const hasNextPage = computed(() => state.value.pagination.current < totalPages.value)
+  const hasPreviousPage = computed(() => state.value.pagination.current > 1)
+  const allVisibleSelected = computed(
+    () =>
+      state.value.stubs.length > 0 &&
+      state.value.stubs.every((stub) => state.value.selectedStubs.has(stub.id))
+  )
 
   // 获取所有stubs
   const fetchStubs = async (page = 0, size = 10, keyword = '') => {
-    loading.value = true
+    state.value.loading = true
+    state.value.error = null
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -32,30 +44,29 @@ export const useStubsStore = defineStore('stubs', () => {
       const response = await fetch(`${API_BASE}/page?${params}`)
 
       if (!response.ok) {
-        // 使用错误处理工具
         throw response
       }
 
       const data = await response.json()
-      stubs.value = data.content
-      totalElements.value = data.totalElements
-      currentPage.value = data.number
-      pageSize.value = data.size
+      // 使用单一状态更新
+      state.value.stubs = data.content
+      state.value.pagination = {
+        current: data.number,
+        size: data.size,
+        total: data.totalElements
+      }
+      state.value.searchKeyword = keyword
     } catch (error) {
-      // 使用统一的错误处理
-      const errorInfo = handleApiError(error)
-      // 可以在这里添加用户通知逻辑
-      // 例如: showNotification(errorInfo)
-      throw errorInfo
+      state.value.error = handleApiError(error)
+      throw state.value.error
     } finally {
-      loading.value = false
+      state.value.loading = false
     }
   }
 
   // 搜索stubs
   const searchStubs = async (keyword) => {
-    searchKeyword.value = keyword
-    await fetchStubs(0, pageSize.value, keyword)
+    await fetchStubs(0, state.value.pagination.size, keyword)
   }
 
   // 获取单个stub
@@ -71,7 +82,7 @@ export const useStubsStore = defineStore('stubs', () => {
     return null
   }
 
-  // 创建stub
+  // 创建单个stub
   const createStub = async (stubData) => {
     try {
       const response = await fetch(API_BASE, {
@@ -82,12 +93,57 @@ export const useStubsStore = defineStore('stubs', () => {
 
       if (response.ok) {
         const newStub = await response.json()
-        await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
         return newStub
       }
       throw new Error('Failed to create stub')
     } catch (error) {
       console.error('Error creating stub:', error)
+      throw error
+    }
+  }
+
+  // 批量创建stubs - 使用标准化的StubMapping格式
+  const createStubs = async (stubDataList) => {
+    try {
+      const response = await fetch(`${API_BASE}/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stubDataList),
+      })
+
+      if (response.ok) {
+        const newStubs = await response.json()
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
+        return newStubs
+      }
+      throw new Error('Failed to create stubs in bulk')
+    } catch (error) {
+      console.error('Error creating stubs in bulk:', error)
+      throw error
+    }
+  }
+
+  // 批量导入stubs - 使用新的/import端点，支持原始JSON格式
+  const importStubs = async (importData) => {
+    try {
+      const response = await fetch(`${API_BASE}/bulk/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(importData),
+      })
+
+      if (response.ok) {
+        const newStubs = await response.json()
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
+        return newStubs
+      }
+      throw new Error('Failed to import stubs')
+    } catch (error) {
+      console.error('Error importing stubs:', error)
       throw error
     }
   }
@@ -103,7 +159,8 @@ export const useStubsStore = defineStore('stubs', () => {
 
       if (response.ok) {
         const updatedStub = await response.json()
-        await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
         return updatedStub
       }
       throw new Error('Failed to update stub')
@@ -121,7 +178,8 @@ export const useStubsStore = defineStore('stubs', () => {
       })
 
       if (response.ok) {
-        await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
         return true
       }
       throw new Error('Failed to delete stub')
@@ -131,7 +189,7 @@ export const useStubsStore = defineStore('stubs', () => {
     }
   }
 
-  // 切换stub启用状态
+  // 切换stub启用状态 - 优化为单条更新，不刷新全量
   const toggleStub = async (id) => {
     try {
       const response = await fetch(`${API_BASE}/${id}/toggle`, {
@@ -140,9 +198,10 @@ export const useStubsStore = defineStore('stubs', () => {
 
       if (response.ok) {
         const updatedStub = await response.json()
-        const index = stubs.value.findIndex((s) => s.id === id)
+        // 直接更新本地状态，避免全量刷新
+        const index = state.value.stubs.findIndex((s) => s.id === id)
         if (index !== -1) {
-          stubs.value[index] = updatedStub
+          state.value.stubs[index] = updatedStub
         }
         return updatedStub
       }
@@ -161,7 +220,8 @@ export const useStubsStore = defineStore('stubs', () => {
       })
 
       if (response.ok) {
-        await fetchStubs(currentPage.value, pageSize.value, searchKeyword.value)
+        // 重新加载当前页面
+        await fetchStubs(state.value.pagination.current, state.value.pagination.size, state.value.searchKeyword)
         return true
       }
       throw new Error('Failed to reload stubs')
@@ -184,65 +244,81 @@ export const useStubsStore = defineStore('stubs', () => {
     return null
   }
 
-  // 批量删除
+  // 批量删除 - 添加事务性支持
   const batchDeleteStubs = async (ids) => {
-    const promises = ids.map((id) => deleteStub(id))
-    try {
-      await Promise.all(promises)
-      return true
-    } catch (error) {
-      console.error('Error batch deleting stubs:', error)
-      throw error
-    }
-  }
-
-  // 批量切换状态
-  const batchToggleStubs = async (ids, enable = true) => {
-    const promises = ids.map(async (id) => {
-      const stub = stubs.value.find((s) => s.id === id)
-      if (stub && stub.enabled !== enable) {
-        return toggleStub(id)
+    const results = []
+    const errors = []
+    // 改为顺序执行以支持部分失败处理
+    for (const id of ids) {
+      try {
+        const result = await deleteStub(id)
+        results.push({ id, success: true, result })
+      } catch (error) {
+        errors.push({ id, success: false, error })
       }
-    })
-    try {
-      await Promise.all(promises)
-      return true
-    } catch (error) {
-      console.error('Error batch toggling stubs:', error)
-      throw error
     }
+    // 如果有错误，抛出包含详细信息的错误
+    if (errors.length > 0) {
+      const errorMsg = `${errors.length} of ${ids.length} operations failed`
+      console.error('Error batch deleting stubs:', errorMsg, errors)
+      throw new Error(errorMsg)
+    }
+    return true
   }
 
-  // 选择操作
+  // 批量切换状态 - 添加事务性支持
+  const batchToggleStubs = async (ids, enable = true) => {
+    const results = []
+    const errors = []
+    // 改为顺序执行以支持部分失败处理
+    for (const id of ids) {
+      try {
+        const stub = state.value.stubs.find((s) => s.id === id)
+        if (stub && stub.enabled !== enable) {
+          const result = await toggleStub(id)
+          results.push({ id, success: true, result })
+        } else {
+          results.push({ id, success: true, skipped: true })
+        }
+      } catch (error) {
+        errors.push({ id, success: false, error })
+      }
+    }
+    // 如果有错误，抛出包含详细信息的错误
+    if (errors.length > 0) {
+      const errorMsg = `${errors.length} of ${ids.length} operations failed`
+      console.error('Error batch toggling stubs:', errorMsg, errors)
+      throw new Error(errorMsg)
+    }
+    return true
+  }
+
+  // 选择操作 - 使用统一状态
   const selectStub = (id) => {
-    selectedStubs.value.add(id)
+    state.value.selectedStubs.add(id)
   }
 
   const deselectStub = (id) => {
-    selectedStubs.value.delete(id)
+    state.value.selectedStubs.delete(id)
   }
 
   const clearSelection = () => {
-    selectedStubs.value.clear()
+    state.value.selectedStubs.clear()
   }
 
   const selectAllVisible = () => {
-    stubs.value.forEach((stub) => {
-      selectedStubs.value.add(stub.id)
+    state.value.stubs.forEach((stub) => {
+      state.value.selectedStubs.add(stub.id)
     })
   }
 
-  const isSelected = (id) => selectedStubs.value.has(id)
+  const isSelected = (id) => state.value.selectedStubs.has(id)
 
+  // 返回统一状态和计算属性
   return {
     // state
-    stubs,
-    loading,
-    currentPage,
-    pageSize,
-    totalElements,
-    searchKeyword,
-    selectedStubs,
+    state,
+    allVisibleSelected,
 
     // computed
     totalPages,
@@ -254,6 +330,8 @@ export const useStubsStore = defineStore('stubs', () => {
     searchStubs,
     getStubById,
     createStub,
+    createStubs,
+    importStubs,
     updateStub,
     deleteStub,
     toggleStub,

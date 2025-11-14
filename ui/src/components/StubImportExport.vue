@@ -2,11 +2,10 @@
 import { ref } from 'vue'
 import { useStubsStore } from '@/stores/stubs'
 import { Button } from '@/components/ui/button'
-// Toast 功能暂时移除，使用 console.log 替代
 const stubsStore = useStubsStore()
 const isLoading = ref(false)
 
-// 导入 stub
+// 导入 stub - 移除alert()，使用统一的错误处理
 const handleImport = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -17,59 +16,44 @@ const handleImport = async (event) => {
   }
 
   isLoading.value = true
-  
+
   try {
     const text = await file.text()
     const data = JSON.parse(text)
-    
+
+    let importedCount = 0
+    let skippedCount = 0
+
     // 支持多种格式：单个 stub、stub 数组、WireMock 格式
-    let stubsToImport = []
-    
+    let importData = {}
+
     if (Array.isArray(data)) {
-      // 直接是 stub 数组
-      stubsToImport = data
+      // 直接是 stub 数组 - 使用 stubs 字段包装
+      importData = { stubs: data }
     } else if (data.mappings) {
       // WireMock 格式：{ "mappings": [...] }
-      stubsToImport = data.mappings
+      importData = { mappings: data.mappings }
     } else if (data.request || data.response) {
-      // 单个 stub 对象
-      stubsToImport = [data]
+      // 单个 stub 对象 - 使用 stubs 字段包装为数组
+      importData = { stubs: [data] }
     } else {
       throw new Error('不支持的 JSON 格式')
     }
-    
-    // 验证并导入
-    let importedCount = 0
-    let skippedCount = 0
-    
-    for (const stubData of stubsToImport) {
-      try {
-        // 标准化 stub 数据
-        const normalizedStub = normalizeStub(stubData)
-        
-        // 检查是否已存在（基于名称或请求特征）
-        const exists = stubsStore.stubs.some(existing => 
-          existing.name === normalizedStub.name ||
-          (existing.method === normalizedStub.method && existing.url === normalizedStub.url)
-        )
-        
-        if (!exists) {
-          await stubsStore.createStub(normalizedStub)
-          importedCount++
-        } else {
-          skippedCount++
-        }
-      } catch (error) {
-        console.warn('Failed to import stub:', stubData, error)
-        skippedCount++
-      }
+
+    // 使用新的导入 API - 后端会处理标准化和去重
+    try {
+      const createdStubs = await stubsStore.importStubs(importData)
+      importedCount = createdStubs.length
+      console.log(`导入完成: 成功导入 ${importedCount} 个 stub`)
+    } catch (error) {
+      console.error('Failed to import stubs:', error)
+      throw error
     }
-    
-    console.log(`导入完成: 成功导入 ${importedCount} 个 stub，跳过 ${skippedCount} 个`)
-    
+
   } catch (error) {
     console.error('Import failed:', error)
-    console.error('导入失败:', error.message)
+    // 不在这里显示错误，由调用方处理
+    throw error
   } finally {
     isLoading.value = false
     // 清空 file input
@@ -77,19 +61,19 @@ const handleImport = async (event) => {
   }
 }
 
-// 导出 stub
+// 导出 stub - 移除alert()
 const handleExport = async () => {
-  if (stubsStore.stubs.length === 0) {
-    console.log('没有 stub 可导出')
+  if (stubsStore.state.value.stubs.length === 0) {
+    console.warn('没有 stub 可导出')
     return
   }
 
   isLoading.value = true
-  
+
   try {
     // 准备导出数据（WireMock 兼容格式）
     const exportData = {
-      mappings: stubsStore.stubs.map(stub => ({
+      mappings: stubsStore.state.value.stubs.map(stub => ({
         id: stub.id,
         name: stub.name,
         request: stub.request,
@@ -98,13 +82,13 @@ const handleExport = async () => {
         enabled: stub.enabled
       }))
     }
-    
+
     // 创建下载
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
     })
     const url = URL.createObjectURL(blob)
-    
+
     const a = document.createElement('a')
     a.href = url
     a.download = `wiremock-stubs-${new Date().toISOString().split('T')[0]}.json`
@@ -112,29 +96,25 @@ const handleExport = async () => {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    console.log(`导出成功: 已导出 ${stubsStore.stubs.length} 个 stub`)
-    
+    console.log(`导出成功: 已导出 ${stubsStore.state.value.stubs.length} 个 stub`)
   } catch (error) {
     console.error('Export failed:', error)
-    console.error('导出失败:', error.message)
+    // 不显示alert，错误由调用方处理
+    throw error
   } finally {
     isLoading.value = false
   }
 }
 
-// 导出选中的 stub
+// 导出选中的 stub - 移除toast()调用
 const handleExportSelected = async (selectedStubs) => {
   if (selectedStubs.length === 0) {
-    toast({
-      title: '提示',
-      description: '请先选择要导出的 stub'
-    })
+    console.warn('请先选择要导出的 stub')
     return
   }
 
   isLoading.value = true
-  
+
   try {
     const exportData = {
       mappings: selectedStubs.map(stub => ({
@@ -146,12 +126,12 @@ const handleExportSelected = async (selectedStubs) => {
         enabled: stub.enabled
       }))
     }
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
     })
     const url = URL.createObjectURL(blob)
-    
+
     const a = document.createElement('a')
     a.href = url
     a.download = `wiremock-selected-stubs-${new Date().toISOString().split('T')[0]}.json`
@@ -159,43 +139,21 @@ const handleExportSelected = async (selectedStubs) => {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    toast({
-      title: '导出成功',
-      description: `已导出 ${selectedStubs.length} 个选中的 stub`
-    })
-    
+
+    console.log(`已导出 ${selectedStubs.length} 个选中的 stub`)
+
   } catch (error) {
     console.error('Export selected failed:', error)
     console.error('导出失败:', error.message)
+    // 不显示toast，错误由调用方处理
+    throw error
   } finally {
     isLoading.value = false
   }
 }
 
-// 标准化 stub 数据格式
-const normalizeStub = (stubData) => {
-  // 确保有基本字段
-  const stub = {
-    name: stubData.name || `Imported-${Date.now()}`,
-    method: stubData.request?.method || 'GET',
-    url: stubData.request?.urlPattern || stubData.request?.url || '/',
-    enabled: stubData.enabled !== false,
-    priority: stubData.priority || 0,
-    request: stubData.request || {},
-    response: stubData.response || { status: 200, body: '' }
-  }
-  
-  // 确保 response 有基本字段
-  if (!stub.response.status) {
-    stub.response.status = 200
-  }
-  if (!stub.response.headers) {
-    stub.response.headers = { 'Content-Type': 'application/json' }
-  }
-  
-  return stub
-}
+// 标准化逻辑已移至后端 StubMappingController
+// 前端现在直接传递原始数据，不进行转换
 
 // 导出单个 stub
 const exportSingleStub = (stub) => {

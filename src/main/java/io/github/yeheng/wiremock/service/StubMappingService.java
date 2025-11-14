@@ -1,5 +1,6 @@
 package io.github.yeheng.wiremock.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -166,6 +167,48 @@ public class StubMappingService {
         List<StubMapping> stubs = stubMappingRepository.findAll();
         wireMockManager.reloadAllStubs(stubs);
         log.info("已重新加载所有 stubs，数量: {}", stubs.size());
+    }
+
+    /**
+     * 批量创建 StubMapping - 支持去重
+     */
+    @Transactional
+    public List<StubMapping> createStubs(List<StubMapping> stubs) {
+        log.info("批量创建 Stub，数量: {}", stubs.size());
+
+        ensureRunning();
+
+        // 验证并去重
+        List<StubMapping> stubsToSave = new ArrayList<>();
+        int skippedCount = 0;
+
+        for (StubMapping stub : stubs) {
+            // 先验证
+            validateStubMapping(stub);
+
+            // 检查是否已存在（基于方法和URL）
+            List<StubMapping> existing = stubMappingRepository.findByMethodAndUrl(stub.getMethod(), stub.getUrl());
+            if (!existing.isEmpty()) {
+                // 已存在，跳过
+                skippedCount++;
+                log.debug("跳过已存在的 Stub: method={}, url={}", stub.getMethod(), stub.getUrl());
+            } else {
+                stubsToSave.add(stub);
+            }
+        }
+
+        // 保存所有新stub
+        List<StubMapping> savedStubs = stubMappingRepository.saveAll(stubsToSave);
+
+        // 添加到WireMock
+        for (StubMapping savedStub : savedStubs) {
+            if (savedStub.getEnabled()) {
+                wireMockManager.addStubMapping(savedStub);
+            }
+        }
+
+        log.info("Stub 批量创建成功: 新增={}, 跳过={}", savedStubs.size(), skippedCount);
+        return savedStubs;
     }
 
     /**
